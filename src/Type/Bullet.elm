@@ -1,4 +1,4 @@
-module Types.Bullet exposing (..)
+module Type.Bullet exposing (..)
 
 import Html.Attributes as Html
 import Html exposing (Html, text)

@@ -1,7 +1,5 @@
 module Main exposing (..)
 
-import CollectionSpread
-import DailySpread
 import Date exposing (Date)
 import Dict exposing (Dict)
 import Html.Attributes as Html
@@ -16,7 +14,6 @@ import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Toolbar as Toolbar
-import MonthlySpread
 import Navigation
 import Ports
 import State exposing (State)
@@ -24,6 +21,9 @@ import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Url exposing (Url)
+import View.CollectionSpread as CollectionSpread
+import View.DailySpread as DailySpread
+import View.MonthlySpread as MonthlySpread
 
 
 type alias Model =

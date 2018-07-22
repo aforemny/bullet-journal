@@ -3,7 +3,7 @@ module State exposing (..)
 import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
-import Types.Bullet as Bullet exposing (Bullet)
+import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias State =

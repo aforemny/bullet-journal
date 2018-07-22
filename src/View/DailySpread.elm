@@ -1,4 +1,4 @@
-module DailySpread exposing (..)
+module View.DailySpread exposing (..)
 
 import Dict exposing (Dict)
 import Html.Attributes as Html
@@ -9,7 +9,7 @@ import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
 import Time.Calendar.Week as Calendar
-import Types.Bullet as Bullet exposing (Bullet)
+import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias Model =

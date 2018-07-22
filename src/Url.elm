@@ -1,11 +1,11 @@
 module Url exposing (..)
 
-import CollectionSpread
-import DailySpread
-import MonthlySpread
 import Navigation
 import String
 import UrlParser exposing (..)
+import View.CollectionSpread as CollectionSpread
+import View.DailySpread as DailySpread
+import View.MonthlySpread as MonthlySpread
 
 
 type Url

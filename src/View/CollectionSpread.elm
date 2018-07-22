@@ -1,10 +1,10 @@
-module CollectionSpread exposing (..)
+module View.CollectionSpread exposing (..)
 
 import Date exposing (Date)
 import Html.Attributes as Html
 import Html.Events as Html
 import Html exposing (Html, text)
-import Types.Bullet as Bullet exposing (Bullet)
+import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias Model =

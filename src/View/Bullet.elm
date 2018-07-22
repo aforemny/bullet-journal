@@ -1,4 +1,4 @@
-module Bullet exposing (..)
+module View.Bullet exposing (..)
 
 import Html exposing (Html, text)
 import Types.Bullet as Bullet exposing (Bullet)
