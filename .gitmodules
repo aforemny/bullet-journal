@@ -1,0 +1,9 @@
+[submodule "src/parse"]
+	path = src/parse
+	url = github.com:aforemny/parse.git
+[submodule "src/elm-time"]
+	path = src/elm-time
+	url = github.com:aforemny/elm-time.git
+[submodule "src/elm-mdc"]
+	path = src/elm-mdc
+	url = github.com:aforemny/elm-mdc.git

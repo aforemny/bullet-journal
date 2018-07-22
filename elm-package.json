@@ -6,7 +6,8 @@
     "source-directories": [
         "src",
         "src/elm-mdc/src",
-        "src/elm-time/src"
+        "src/elm-time/src",
+        "src/parse/src"
     ],
     "exposed-modules": [],
     "dependencies": {

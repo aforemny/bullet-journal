@@ -4,15 +4,18 @@
   "description": "bullet journal",
   "main": "elm.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm:dev:*\"",
+    "dev:dashboard": "parse-dashboard",
+    "dev:express": "node index.js",
+    "dev:mongod": "mongod --dbpath ./data"
   },
   "repository": {
     "type": "git",
     "url": "github.com:aforemny/bujo.git"
   },
   "keywords": [
-    "bullet",
-    "journal"
+    "bulletjournal",
+    "bullet journal"
   ],
   "author": "Alexander Foremny <aforemny@posteo.de>",
   "license": "BSD-3-Clause",
@@ -25,8 +28,12 @@
     "@material/theme": "^0.35.0",
     "@material/toolbar": "^0.37.1",
     "@material/typography": "^0.37.1",
+    "concurrently": "^3.6.0",
+    "express": "^4.16.3",
     "material-design-icons": "^3.0.1",
     "normalize.css": "^8.0.0",
+    "parse-dashboard": "^1.2.0",
+    "parse-server": "^2.8.2",
     "roboto-fontface": "^0.9.0"
   }
 }

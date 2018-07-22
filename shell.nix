@@ -6,5 +6,5 @@ let
 in
 mkDerivation {
   name = "bujo";
-  buildInputs = [ elm-make ];
+  buildInputs = [ gcc mongodb elm-make ];
 }

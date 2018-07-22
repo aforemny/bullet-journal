@@ -2,3 +2,6 @@ elm-stuff
 elm.js
 site.css
 node_modules
+data
+logs
+public
