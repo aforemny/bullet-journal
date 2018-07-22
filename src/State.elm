@@ -3,6 +3,7 @@ module State exposing (..)
 import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Encode as Encode
+import Types.Bullet as Bullet exposing (Bullet)
 
 
 type alias State =
@@ -16,7 +17,7 @@ type alias MonthlySpread =
     { year : Int
     , month : Int
     , items : List { dayOfMonth : Int, text : String }
-    , bullets : List String
+    , bullets : List Bullet
     }
 
 
@@ -33,7 +34,7 @@ encodeMonthlySpread monthlySpread =
             [ ( "year", Encode.int monthlySpread.year )
             , ( "month", Encode.int monthlySpread.month )
             , ( "items", Encode.list (List.map encodeItem monthlySpread.items) )
-            , ( "bullets", Encode.list (List.map Encode.string monthlySpread.bullets) )
+            , ( "bullets", Encode.list (List.map encodeBullet monthlySpread.bullets) )
             ]
 
 
@@ -52,14 +53,14 @@ decodeMonthlySpread =
             (Decode.at [ "year" ] Decode.int)
             (Decode.at [ "month" ] Decode.int)
             (Decode.at [ "items" ] (Decode.list decodeItem))
-            (Decode.at [ "bullets" ] (Decode.list Decode.string))
+            (Decode.at [ "bullets" ] (Decode.list decodeBullet))
 
 
 type alias DailySpread =
     { year : Int
     , month : Int
     , dayOfMonth : Int
-    , bullets : List String
+    , bullets : List Bullet
     }
 
 
@@ -69,7 +70,7 @@ encodeDailySpread dailySpread =
         [ ( "year", Encode.int dailySpread.year )
         , ( "month", Encode.int dailySpread.month )
         , ( "dayOfMonth", Encode.int dailySpread.dayOfMonth )
-        , ( "bullets", Encode.list (List.map Encode.string dailySpread.bullets) )
+        , ( "bullets", Encode.list (List.map encodeBullet dailySpread.bullets) )
         ]
 
 
@@ -79,14 +80,14 @@ decodeDailySpread =
         (Decode.at [ "year" ] Decode.int)
         (Decode.at [ "month" ] Decode.int)
         (Decode.at [ "dayOfMonth" ] Decode.int)
-        (Decode.at [ "bullets" ] (Decode.list Decode.string))
+        (Decode.at [ "bullets" ] (Decode.list decodeBullet))
 
 
 type alias CollectionSpread =
     { id : String
     , createdDate : Date
     , title : String
-    , bullets : List String
+    , bullets : List Bullet
     }
 
 
@@ -96,7 +97,7 @@ encodeCollectionSpread collectionSpread =
         [ ( "id", Encode.string collectionSpread.id )
         , ( "createdDate", encodeDate collectionSpread.createdDate )
         , ( "title", Encode.string collectionSpread.title )
-        , ( "bullets", Encode.list (List.map Encode.string collectionSpread.bullets) )
+        , ( "bullets", Encode.list (List.map encodeBullet collectionSpread.bullets) )
         ]
 
 
@@ -106,7 +107,7 @@ decodeCollectionSpread =
         (Decode.at [ "id" ] Decode.string)
         (Decode.at [ "createdDate" ] decodeDate)
         (Decode.at [ "title" ] Decode.string)
-        (Decode.at [ "bullets" ] (Decode.list Decode.string))
+        (Decode.at [ "bullets" ] (Decode.list decodeBullet))
 
 
 encode : State -> Value
@@ -134,3 +135,103 @@ encodeDate date =
 decodeDate : Decoder Date
 decodeDate =
     Decode.map Date.fromTime Decode.float
+
+
+encodeBullet : Bullet -> Value
+encodeBullet bullet =
+    case bullet of
+        Bullet.Task task ->
+            Encode.object
+                [ ( "ctor", Encode.string "task" )
+                , ( "text", Encode.string task.text )
+                , ( "state", encodeTaskState task.state )
+                ]
+
+        Bullet.Event event ->
+            Encode.object
+                [ ( "ctor", Encode.string "event" )
+                , ( "text", Encode.string event.text )
+                ]
+
+        Bullet.Note note ->
+            Encode.object
+                [ ( "ctor", Encode.string "note" )
+                , ( "text", Encode.string note.text )
+                ]
+
+
+decodeBullet : Decoder Bullet
+decodeBullet =
+    let
+        decodeTask =
+            Decode.map Bullet.Task <|
+                Decode.map2
+                    (\text state ->
+                        { text = text, state = state }
+                    )
+                    (Decode.at [ "text" ] Decode.string)
+                    (Decode.at [ "state" ] decodeTaskState)
+
+        decodeEvent =
+            Decode.map
+                (\text ->
+                    Bullet.Event { text = text }
+                )
+                (Decode.at [ "text" ] Decode.string)
+
+        decodeNote =
+            Decode.map
+                (\text ->
+                    Bullet.Note { text = text }
+                )
+                (Decode.at [ "text" ] Decode.string)
+    in
+        Decode.at [ "ctor" ] Decode.string
+            |> Decode.andThen
+                (\ctor ->
+                    case ctor of
+                        "task" ->
+                            decodeTask
+
+                        "event" ->
+                            decodeEvent
+
+                        "note" ->
+                            decodeNote
+
+                        _ ->
+                            Decode.fail ("expected task, event or note but got " ++ toString ctor)
+                )
+
+
+encodeTaskState : Bullet.TaskState -> Value
+encodeTaskState taskState =
+    case taskState of
+        Bullet.Unchecked ->
+            Encode.string "unchecked"
+
+        Bullet.Checked ->
+            Encode.string "checked"
+
+        Bullet.Migrated ->
+            Encode.string "migrated"
+
+
+decodeTaskState : Decoder Bullet.TaskState
+decodeTaskState =
+    Decode.string
+        |> Decode.andThen
+            (\taskStateString ->
+                case taskStateString of
+                    "unchecked" ->
+                        Decode.succeed Bullet.Unchecked
+
+                    "checked" ->
+                        Decode.succeed Bullet.Checked
+
+                    "migrated" ->
+                        Decode.succeed Bullet.Migrated
+
+                    _ ->
+                        Decode.fail ("expected unchecked, checked or migrated but got " ++ taskStateString)
+            )

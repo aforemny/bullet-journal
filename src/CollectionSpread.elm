@@ -4,13 +4,14 @@ import Date exposing (Date)
 import Html.Attributes as Html
 import Html.Events as Html
 import Html exposing (Html, text)
+import Types.Bullet as Bullet exposing (Bullet)
 
 
 type alias Model =
     { id : Id
     , createdDate : Date
     , title : Title
-    , bullets : List String
+    , bullets : List Bullet
     }
 
 
@@ -97,16 +98,16 @@ update lift msg model =
                 (model.bullets
                     |> \bullets ->
                         if numBullets < index + 1 then
-                            bullets ++ List.repeat (index - numBullets + 1) ""
+                            bullets ++ List.repeat (index - numBullets + 1) (Bullet.Note { text = "" })
                         else
                             bullets
                 )
                     |> List.indexedMap
-                        (\otherIndex otherInput ->
+                        (\otherIndex bullet ->
                             if otherIndex == index then
-                                input
+                                Bullet.Note { text = input }
                             else
-                                otherInput
+                                bullet
                         )
                     |> \bullets ->
                         ( { model | bullets = bullets }, Cmd.none )
@@ -130,16 +131,27 @@ view lift model =
             []
             (List.indexedMap
                 (\index bullet ->
-                    Html.li
-                        []
-                        [ Html.input
-                            [ Html.value bullet
-                            , Html.onInput (lift << BulletChanged index)
-                            ]
-                            []
-                        ]
+                    let
+                        value =
+                            case bullet of
+                                Bullet.Task { text } ->
+                                    text
+
+                                Bullet.Event { text } ->
+                                    text
+
+                                Bullet.Note { text } ->
+                                    text
+                    in
+                        Bullet.view
+                            { node = Html.li
+                            , additionalAttributes =
+                                [ Html.class "collection-spread__bullet"
+                                ]
+                            }
+                            bullet
                 )
-                (model.bullets ++ [ "" ])
+                (model.bullets ++ [ Bullet.Note { text = "" } ])
             )
         ]
 
