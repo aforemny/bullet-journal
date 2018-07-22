@@ -1,18 +1,22 @@
 module Url exposing (..)
 
 import Navigation
+import Parse
+import Private.ObjectId as ObjectId
 import String
-import Type.CollectionSpread as CollectionSpread
-import Type.DailySpread as DailySpread
-import Type.MonthlySpread as MonthlySpread
+import Type.Bullet as Bullet
+import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
+import Type.DailySpread as DailySpread exposing (DailySpread)
+import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import UrlParser exposing (..)
 
 
 type Url
     = Index
-    | MonthlySpread MonthlySpread.Year MonthlySpread.Month
-    | DailySpread DailySpread.Year DailySpread.Month DailySpread.DayOfMonth
-    | CollectionSpread CollectionSpread.Id
+    | CollectionSpread (Parse.ObjectId CollectionSpread)
+    | DailySpread (Parse.ObjectId DailySpread)
+    | MonthlySpread (Parse.ObjectId MonthlySpread)
+    | NewBullet String String (Parse.ObjectId Bullet.Any)
     | NotFound String
 
 
@@ -23,23 +27,17 @@ toString url =
             Index ->
                 ""
 
-            MonthlySpread year month ->
-                String.join "/"
-                    [ "monthly-spread"
-                    , Basics.toString year
-                    , Basics.toString month
-                    ]
+            MonthlySpread objectId ->
+                "monthly-spread/" ++ ObjectId.toString objectId
 
-            DailySpread year month dayOfMonth ->
-                String.join "/"
-                    [ "daily-spread"
-                    , Basics.toString year
-                    , Basics.toString month
-                    , Basics.toString dayOfMonth
-                    ]
+            DailySpread objectId ->
+                "daily-spread/" ++ ObjectId.toString objectId
 
-            CollectionSpread id ->
-                "collection-spread/" ++ id
+            CollectionSpread objectId ->
+                "collection-spread/" ++ ObjectId.toString objectId
+
+            NewBullet route className objectId ->
+                route ++ "/" ++ ObjectId.toString objectId ++ "/bullet/new"
 
             NotFound hash ->
                 hash
@@ -59,9 +57,19 @@ fromLocation location =
 
 
 parseUrl =
-    oneOf
-        [ map Index (s "")
-        , map MonthlySpread (s "monthly-spread" </> int </> int)
-        , map DailySpread (s "daily-spread" </> int </> int </> int)
-        , map CollectionSpread (s "collection-spread" </> string)
-        ]
+    let
+        objectId =
+            map ObjectId.fromString string
+    in
+        oneOf
+            [ map Index (s "")
+            , map (NewBullet "collection-spread" "CollectionSpread")
+                (s "collection-spread" </> objectId </> s "bullet" </> s "new")
+            , map (NewBullet "monthly-spread" "MonthlySpread")
+                (s "monthly-spread" </> objectId </> s "bullet" </> s "new")
+            , map (NewBullet "daily-spread" "DailySpread")
+                (s "daily-spread" </> objectId </> s "bullet" </> s "new")
+            , map CollectionSpread (s "collection-spread" </> objectId)
+            , map DailySpread (s "daily-spread" </> objectId)
+            , map MonthlySpread (s "monthly-spread" </> objectId)
+            ]

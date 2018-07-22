@@ -1,38 +1,63 @@
 module Type.CollectionSpread exposing (..)
 
 import Date exposing (Date)
+import Json.Decode as Decode exposing (Decoder, Value)
+import Json.Decode.Pipeline as Decode
+import Json.Encode as Encode
+import Parse
+import Parse.Decode
+import Parse.Encode
+import Task exposing (Task)
 import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias CollectionSpread =
-    { id : Id
-    , createdDate : Date
-    , title : Title
-    , bullets : List Bullet
+    { title : String
+    , createdAt : Date
     }
 
 
-type alias Id =
-    String
+empty : String -> CollectionSpread
+empty title =
+    { title = title
+    , createdAt = Date.fromTime 0
+    }
 
 
-type alias Title =
-    String
+encode : CollectionSpread -> Value
+encode collectionSpread =
+    Encode.object
+        [ ( "title", Encode.string collectionSpread.title )
+        ]
 
 
-empty : Id -> Date -> CollectionSpread
-empty id date =
-    { id = id
-    , createdDate = date
-    , title = ""
-    , bullets = []
+decode : Decoder (Parse.Object CollectionSpread)
+decode =
+    Decode.decode
+        (\objectId createdAt updatedAt title ->
+            { objectId = objectId
+            , createdAt = createdAt
+            , updatedAt = updatedAt
+            , title = title
+            }
+        )
+        |> Decode.required "objectId" Parse.Decode.objectId
+        |> Decode.required "createdAt" Parse.Decode.date
+        |> Decode.required "updatedAt" Parse.Decode.date
+        |> Decode.required "title" Decode.string
+
+
+fromParseObject : Parse.Object CollectionSpread -> CollectionSpread
+fromParseObject collectionSpread =
+    { title = collectionSpread.title
+    , createdAt = collectionSpread.createdAt
     }
 
 
 canonicalDate : CollectionSpread -> ( Int, Int, Int )
 canonicalDate collectionSpread =
-    ( Date.year collectionSpread.createdDate
-    , case Date.month collectionSpread.createdDate of
+    ( Date.year collectionSpread.createdAt
+    , case Date.month collectionSpread.createdAt of
         Date.Jan ->
             1
 
@@ -68,10 +93,28 @@ canonicalDate collectionSpread =
 
         Date.Dec ->
             12
-    , Date.day collectionSpread.createdDate
+    , Date.day collectionSpread.createdAt
     )
 
 
 title : CollectionSpread -> String
 title collectionSpread =
     collectionSpread.title
+
+
+create :
+    Parse.Config
+    -> CollectionSpread
+    -> Task Parse.Error (Parse.ObjectId CollectionSpread)
+create parse collectionSpread =
+    Task.map .objectId <|
+        Parse.toTask parse
+            (Parse.create "CollectionSpread" encode collectionSpread)
+
+
+get :
+    Parse.Config
+    -> Parse.ObjectId CollectionSpread
+    -> Task Parse.Error (Parse.Object CollectionSpread)
+get parse objectId =
+    Parse.toTask parse (Parse.get "CollectionSpread" decode objectId)

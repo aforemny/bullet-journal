@@ -6,6 +6,7 @@ import Html.Events as Html
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder)
 import Material
+import Parse
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
@@ -39,12 +40,18 @@ type alias Index =
     Int
 
 
-init lift =
-  Cmd.none
+init :
+    (Msg msg -> msg)
+    -> View.Config msg
+    -> Parse.ObjectId MonthlySpread
+    -> Model msg
+    -> ( Model msg, Cmd msg )
+init lift viewConfig objectId model =
+    ( defaultModel, Material.init (lift << Mdc) )
 
 
 subscriptions lift model =
-  Material.subscriptions (lift << Mdc) model
+    Material.subscriptions (lift << Mdc) model
 
 
 update : (Msg msg -> msg) -> Msg msg -> Model msg -> ( Model msg, Cmd msg )
@@ -86,6 +93,9 @@ view lift viewConfig model =
     let
         monthlySpread =
             MonthlySpread.empty 2018 7
+
+        bullets =
+            []
     in
         Html.div
             [ Html.class "monthly-spread" ]
@@ -116,8 +126,7 @@ view lift viewConfig model =
                                     Calendar.dayOfWeek day
 
                                 item =
-                                    Dict.get dayOfMonth monthlySpread.items
-                                        |> Maybe.withDefault ""
+                                    ""
                             in
                                 Html.li
                                     [ Html.class "monthly-spread__item"
@@ -174,27 +183,15 @@ view lift viewConfig model =
                     ]
                     (List.indexedMap
                         (\index bullet ->
-                            let
-                                value =
-                                    case bullet of
-                                        Bullet.Task { text } ->
-                                            text
-
-                                        Bullet.Event { text } ->
-                                            text
-
-                                        Bullet.Note { text } ->
-                                            text
-                            in
-                                Bullet.view
-                                    { node = Html.li
-                                    , additionalAttributes =
-                                        [ Html.class "monthly-spread__bullet"
-                                        ]
-                                    }
-                                    bullet
+                            Bullet.view
+                                { node = Html.li
+                                , additionalAttributes =
+                                    [ Html.class "monthly-spread__bullet"
+                                    ]
+                                }
+                                bullet
                         )
-                        (monthlySpread.bullets ++ [ Bullet.Note { text = "" } ])
+                        bullets
                     )
                 ]
             ]

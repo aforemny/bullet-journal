@@ -5,7 +5,7 @@
   "main": "elm.js",
   "scripts": {
     "dev": "concurrently \"npm:dev:*\"",
-    "dev:dashboard": "parse-dashboard",
+    "dev:dashboard": "parse-dashboard --masterKey bujo --appId bujo --serverURL http://localhost:1337/parse",
     "dev:express": "node index.js",
     "dev:mongod": "mongod --dbpath ./data"
   },
@@ -21,10 +21,13 @@
   "license": "BSD-3-Clause",
   "devDependencies": {
     "@material/button": "^0.37.1",
+    "@material/checkbox": "^0.37.1",
     "@material/dialog": "^0.37.1",
     "@material/fab": "^0.37.1",
     "@material/list": "^0.37.1",
     "@material/menu": "^0.37.1",
+    "@material/select": "^0.37.1",
+    "@material/textfield": "^0.37.1",
     "@material/theme": "^0.35.0",
     "@material/toolbar": "^0.37.1",
     "@material/typography": "^0.37.1",

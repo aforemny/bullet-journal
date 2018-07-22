@@ -1,32 +1,45 @@
 module View.Bullet exposing (..)
 
+import Html.Attributes as Html
 import Html exposing (Html, text)
-import Types.Bullet as Bullet exposing (Bullet)
+import Material
+import View
 
 
-view : (Msg -> msg) -> Bullet -> Html msg
-view lift bullet =
-    case bullet of
-        Bullet.Task task ->
-            viewTask lift task
-
-        Bullet.Event event ->
-            viewEvent lift event
-
-        Bullet.Note note ->
-            viewNote lift note
+type alias Model msg =
+    { mdc : Material.Model msg
+    }
 
 
-viewTask : (Msg -> msg) -> { text : String, state : TaskState } -> Html msg
-viewTask lift task =
-    text (toString task)
+defaultModel : Model msg
+defaultModel =
+    { mdc = Material.defaultModel
+    }
 
 
-viewEvent : (Msg -> msg) -> { text : String } -> Html msg
-viewEvent lift event =
-    text (toString event)
+type Msg msg
+    = Mdc (Material.Msg msg)
 
 
-viewNote : (Msg -> msg) -> { text : String } -> Html msg
-viewNote lift note =
-    text (toString note)
+init lift =
+    Material.init (lift << Mdc)
+
+
+subscriptions lift model =
+    Material.subscriptions (lift << Mdc) model
+
+
+update lift msg model =
+    case msg of
+        Mdc msg_ ->
+            Material.update (lift << Mdc) msg_ model
+
+
+view lift viewConfig model =
+    Html.div
+        [ Html.class "bullet"
+        ]
+        [ viewConfig.toolbar
+            { additionalSections = []
+            }
+        ]

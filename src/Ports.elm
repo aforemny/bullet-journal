@@ -2,7 +2,6 @@ port module Ports exposing (..)
 
 import Date exposing (Date)
 import Json.Decode exposing (Value)
-import State exposing (State)
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 
@@ -45,11 +44,3 @@ readDateUnsafe dateString =
 
         Err _ ->
             Debug.crash ("Ports.readDateUnsafe: " ++ dateString)
-
-
-port persistUnsafe : Value -> Cmd msg
-
-
-persist : State -> Cmd msg
-persist state =
-    persistUnsafe (State.encode state)

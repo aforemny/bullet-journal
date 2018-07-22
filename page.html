@@ -7,15 +7,8 @@
     <!-- Indentation is deliberately broken:
 -->
 
-<!--
-<link href="node_modules/roboto-fontface/css/roboto/roboto-fontface.css" rel="stylesheet" type="text/css" />
--->
 <link href="roboto-fontface.css" rel="stylesheet" type="text/css" />
-<!--
-<link href="node_modules/normalize.css/normalize.css" rel="stylesheet" type="text/css" />
--->
 <link href="normalize.css" rel="stylesheet" type="text/css" />
-<!--<link href="node_modules/material-design-icons/iconfont/material-icons.css" rel="stylesheet" type="text/css" />-->
 <link href="material-icons.css" rel="stylesheet" type="text/css" />
 <link href="site.css" rel="stylesheet" type="text/css" />
 <script src="elm-mdc.js"></script>
@@ -26,15 +19,9 @@ var getToday = function() {
   return '' + now.getFullYear() + '-' + (1 + now.getMonth()) + "-" + now.getDate();
 };
 
-var state = window.localStorage.getItem('state');
-if (state) {
-  state = JSON.parse(state);
-}
-console.log(state);
 var app = Elm.Main.fullscreen({
   today: getToday(),
   now: ''+new Date(),
-  state: state,
 });
 
 var updateToday = function() {
@@ -48,8 +35,4 @@ var updateNow = function() {
   window.setTimeout(updateNow, 500);
 };
 updateNow();
-
-app.ports.persistUnsafe.subscribe(function(state) {
-  window.localStorage.setItem('state', JSON.stringify(state));
-});
 </script>

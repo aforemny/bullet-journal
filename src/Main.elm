@@ -15,28 +15,35 @@ import Material.List as Lists
 import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Toolbar as Toolbar
 import Navigation
+import Parse
 import Ports
-import State exposing (State)
+import Private.ObjectId as ObjectId
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
+import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import Url exposing (Url)
 import View
+import View.Bullet
 import View.CollectionSpread
 import View.DailySpread
+import View.Index
 import View.MonthlySpread
+import View.NewBullet
 
 
 type alias Model =
     { mdc : Material.Model Msg
     , url : Url
-    , monthlySpread : View.MonthlySpread.Model Msg
-    , dailySpread : View.DailySpread.Model Msg
     , collectionSpread : View.CollectionSpread.Model Msg
-    , showNewSpreadDialog : Bool
+    , dailySpread : View.DailySpread.Model Msg
+    , index : View.Index.Model Msg
+    , monthlySpread : View.MonthlySpread.Model Msg
+    , bullet : View.Bullet.Model Msg
+    , newBullet : Maybe (View.NewBullet.Model Msg)
     , today : Calendar.Day
     , now : Date
     }
@@ -46,10 +53,12 @@ defaultModel : Model
 defaultModel =
     { mdc = Material.defaultModel
     , url = Url.Index
-    , monthlySpread = View.MonthlySpread.defaultModel
-    , dailySpread = View.DailySpread.defaultModel
     , collectionSpread = View.CollectionSpread.defaultModel
-    , showNewSpreadDialog = False
+    , dailySpread = View.DailySpread.defaultModel
+    , index = View.Index.defaultModel
+    , monthlySpread = View.MonthlySpread.defaultModel
+    , bullet = View.Bullet.defaultModel
+    , newBullet = Nothing
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
     }
@@ -59,27 +68,20 @@ type Msg
     = NoOp
     | Mdc (Material.Msg Msg)
     | SetUrl Url
-    | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
-    | DailySpreadMsg (View.DailySpread.Msg Msg)
-    | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
-    | NewSpreadClicked
-    | NewSpreadDialogClosed
-    | NewMonthlySpreadClicked
-    | NewDailySpreadClicked
-    | NewCollectionSpreadClicked
     | TodayChanged Calendar.Day
     | NowChanged Date
-    | MonthlySpreadClicked MonthlySpread
-    | DailySpreadClicked DailySpread
-    | CollectionSpreadClicked CollectionSpread
     | BackClicked
+    | BulletMsg (View.Bullet.Msg Msg)
+    | NewBulletMsg (View.NewBullet.Msg Msg)
+    | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
+    | DailySpreadMsg (View.DailySpread.Msg Msg)
+    | IndexMsg (View.Index.Msg Msg)
+    | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
 
 
 type alias Flags =
     { today : String
-    , now :
-        String
-        -- , state : Maybe Value
+    , now : String
     }
 
 
@@ -95,100 +97,26 @@ main =
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
 init flags location =
-    --    let
-    --        state =
-    --            case
-    --                flags.state
-    --                    |> Maybe.map (Decode.decodeValue State.decode)
-    --            of
-    --                Just (Ok state) ->
-    --                    Just state
-    --
-    --                Just (Err err) ->
-    --                    Debug.crash ("init: " ++ err)
-    --
-    --                Nothing ->
-    --                    Nothing
-    --
-    --        monthlySpreads =
-    --            state
-    --                |> Maybe.map .monthlySpreads
-    --                |> Maybe.map
-    --                    (List.map
-    --                        (\monthlySpread ->
-    --                            ( ( monthlySpread.year, monthlySpread.month )
-    --                            , { year = monthlySpread.year
-    --                              , month = monthlySpread.month
-    --                              , items =
-    --                                    monthlySpread.items
-    --                                        |> List.map
-    --                                            (\item ->
-    --                                                ( item.dayOfMonth, item.text )
-    --                                            )
-    --                                        |> Dict.fromList
-    --                              , bullets = monthlySpread.bullets
-    --                              }
-    --                            )
-    --                        )
-    --                    )
-    --                |> Maybe.map Dict.fromList
-    --                |> Maybe.withDefault defaultModel.monthlySpreads
-    --
-    --        dailySpreads =
-    --            state
-    --                |> Maybe.map .dailySpreads
-    --                |> Maybe.map
-    --                    (List.map
-    --                        (\dailySpread ->
-    --                            ( ( dailySpread.year
-    --                              , dailySpread.month
-    --                              , dailySpread.dayOfMonth
-    --                              )
-    --                            , { year = dailySpread.year
-    --                              , month = dailySpread.month
-    --                              , dayOfMonth = dailySpread.dayOfMonth
-    --                              , bullets = dailySpread.bullets
-    --                              }
-    --                            )
-    --                        )
-    --                    )
-    --                |> Maybe.map Dict.fromList
-    --                |> Maybe.withDefault defaultModel.dailySpreads
-    --
-    --        collectionSpreads =
-    --            state
-    --                |> Maybe.map .collectionSpreads
-    --                |> Maybe.map
-    --                    (List.map
-    --                        (\collectionSpread ->
-    --                            ( collectionSpread.id
-    --                            , { id = collectionSpread.id
-    --                              , createdDate = collectionSpread.createdDate
-    --                              , title = collectionSpread.title
-    --                              , bullets = collectionSpread.bullets
-    --                              }
-    --                            )
-    --                        )
-    --                    )
-    --                |> Maybe.map Dict.fromList
-    --                |> Maybe.withDefault defaultModel.collectionSpreads
-    --    in
-    ( { defaultModel
-        | today = Ports.readDayUnsafe flags.today
-        , now = Ports.readDateUnsafe flags.now
-        , url =
+    let
+        url =
             Url.fromLocation location
-            --            , monthlySpreads = monthlySpreads
-            --            , dailySpreads = dailySpreads
-            --            , collectionSpreads = collectionSpreads
-      }
-    , Cmd.batch
-        [ Material.init Mdc
-        , View.CollectionSpread.init CollectionSpreadMsg
-        , View.DailySpread.init DailySpreadMsg
-        , View.MonthlySpread.init MonthlySpreadMsg
-        ]
-    )
+
+        viewConfig =
+            makeViewConfig model
+
+        model =
+            { defaultModel
+                | today = Ports.readDayUnsafe flags.today
+                , now = Ports.readDateUnsafe flags.now
+                , url = url
+            }
+    in
+        ( model
+        , Cmd.batch
+            [ Material.init Mdc
+            ]
+        )
+            |> initView viewConfig url
 
 
 subscriptions : Model -> Sub Msg
@@ -197,249 +125,200 @@ subscriptions model =
         [ Material.subscriptions Mdc model
         , Ports.today TodayChanged
         , Ports.now NowChanged
+        , View.Bullet.subscriptions BulletMsg model.bullet
         , View.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
         , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
+        , View.Index.subscriptions IndexMsg model.index
         , View.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
+        , model.newBullet
+            |> Maybe.map (View.NewBullet.subscriptions NewBulletMsg)
+            |> Maybe.withDefault Sub.none
         ]
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    -- persist <|
-    case msg of
-        NoOp ->
-            ( model, Cmd.none )
+initView : View.Config Msg -> Url -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+initView viewConfig url ( model, cmd ) =
+    (case url of
+        Url.Index ->
+            View.Index.init IndexMsg viewConfig model.index
+                |> Tuple.mapFirst
+                    (\index ->
+                        { model | index = index }
+                    )
 
-        Mdc msg_ ->
-            Material.update Mdc msg_ model
-
-        SetUrl url ->
-            ( { model | url = url }, Cmd.none )
-
-        MonthlySpreadMsg msg_ ->
-            model.monthlySpread
-                |> View.MonthlySpread.update MonthlySpreadMsg msg_
+        Url.MonthlySpread objectId ->
+            View.MonthlySpread.init MonthlySpreadMsg
+                viewConfig
+                objectId
+                model.monthlySpread
                 |> Tuple.mapFirst
                     (\monthlySpread ->
                         { model | monthlySpread = monthlySpread }
                     )
 
-        DailySpreadMsg msg_ ->
-            model.dailySpread
-                |> View.DailySpread.update DailySpreadMsg msg_
+        Url.DailySpread objectId ->
+            View.DailySpread.init
+                DailySpreadMsg
+                viewConfig
+                objectId
+                model.dailySpread
                 |> Tuple.mapFirst
                     (\dailySpread ->
                         { model | dailySpread = dailySpread }
                     )
 
-        CollectionSpreadMsg msg_ ->
-            model.collectionSpread
-                |> View.CollectionSpread.update CollectionSpreadMsg msg_
+        Url.CollectionSpread objectId ->
+            View.CollectionSpread.init CollectionSpreadMsg
+                viewConfig
+                objectId
+                model.collectionSpread
                 |> Tuple.mapFirst
                     (\collectionSpread ->
                         { model | collectionSpread = collectionSpread }
                     )
 
-        NewSpreadClicked ->
-            ( { model | showNewSpreadDialog = True }, Cmd.none )
+        Url.NewBullet route className objectId ->
+            View.NewBullet.init NewBulletMsg
+                viewConfig
+                (case className of
+                    "CollectionSpread" ->
+                        Url.CollectionSpread (Bullet.castObjectId objectId)
 
-        NewSpreadDialogClosed ->
-            ( { model | showNewSpreadDialog = False }, Cmd.none )
+                    "MonthlySpread" ->
+                        Url.MonthlySpread (Bullet.castObjectId objectId)
 
-        NewMonthlySpreadClicked ->
-            let
-                ( year, month, _ ) =
-                    Calendar.toGregorian model.today
-
-                newMonthlySpread =
-                    MonthlySpread.empty year month
-            in
-                ( { model
-                    | showNewSpreadDialog =
-                        False
-                        --                    , monthlySpreads =
-                        --                        if not (Dict.member ( year, month ) model.monthlySpreads) then
-                        --                            Dict.insert ( year, month )
-                        --                                newMonthlySpread
-                        --                                model.monthlySpreads
-                        --                        else
-                        --                            model.monthlySpreads
-                  }
-                , Navigation.newUrl (Url.toString (Url.MonthlySpread year month))
+                    _ ->
+                        Url.DailySpread (Bullet.castObjectId objectId)
                 )
-
-        NewDailySpreadClicked ->
-            let
-                ( year, month, dayOfMonth ) =
-                    Calendar.toGregorian model.today
-
-                newDailySpread =
-                    DailySpread.empty year month dayOfMonth
-            in
-                ( { model
-                    | showNewSpreadDialog =
-                        False
-                        --                    , dailySpreads =
-                        --                        if not (Dict.member ( year, month, dayOfMonth ) model.dailySpreads) then
-                        --                            Dict.insert ( year, month, dayOfMonth )
-                        --                                newDailySpread
-                        --                                model.dailySpreads
-                        --                        else
-                        --                            model.dailySpreads
-                  }
-                , Navigation.newUrl
-                    (Url.toString (Url.DailySpread year month dayOfMonth))
-                )
-
-        NewCollectionSpreadClicked ->
-            let
-                id =
-                    toString (Date.toTime model.now)
-
-                createdDate =
-                    model.now
-
-                newCollectionSpread =
-                    CollectionSpread.empty id createdDate
-            in
-                --                if not (Dict.member id model.collectionSpreads) then
-                ( { model
-                    | showNewSpreadDialog =
-                        False
-                        --                        , collectionSpreads =
-                        --                            Dict.insert id
-                        --                                newCollectionSpread
-                        --                                model.collectionSpreads
-                  }
-                , Navigation.newUrl (Url.toString (Url.CollectionSpread id))
-                )
-
-        --                else
-        --                    ( model, Cmd.none )
-        TodayChanged today ->
-            ( { model | today = today }, Cmd.none )
-
-        NowChanged now ->
-            ( { model | now = now }, Cmd.none )
-
-        MonthlySpreadClicked monthlySpread ->
-            ( model
-            , Navigation.newUrl
-                (Url.toString
-                    (Url.MonthlySpread monthlySpread.year monthlySpread.month)
-                )
-            )
-
-        DailySpreadClicked dailySpread ->
-            ( model
-            , Navigation.newUrl
-                (Url.toString
-                    (Url.DailySpread dailySpread.year
-                        dailySpread.month
-                        dailySpread.dayOfMonth
+                (Parse.pointer className objectId)
+                model.newBullet
+                |> Tuple.mapFirst
+                    (\newBullet ->
+                        { model | newBullet = Just newBullet }
                     )
+
+        _ ->
+            ( model, Cmd.none )
+    )
+        |> Tuple.mapSecond
+            (\otherCmd ->
+                Cmd.batch [ cmd, otherCmd ]
+            )
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    let
+        viewConfig =
+            makeViewConfig model
+    in
+        case msg of
+            NoOp ->
+                ( model, Cmd.none )
+
+            Mdc msg_ ->
+                Material.update Mdc msg_ model
+
+            SetUrl url ->
+                ( { model | url = url }, Cmd.none )
+                    |> initView viewConfig url
+
+            MonthlySpreadMsg msg_ ->
+                model.monthlySpread
+                    |> View.MonthlySpread.update MonthlySpreadMsg msg_
+                    |> Tuple.mapFirst
+                        (\monthlySpread -> { model | monthlySpread = monthlySpread })
+
+            DailySpreadMsg msg_ ->
+                model.dailySpread
+                    |> View.DailySpread.update DailySpreadMsg msg_
+                    |> Tuple.mapFirst
+                        (\dailySpread -> { model | dailySpread = dailySpread })
+
+            CollectionSpreadMsg msg_ ->
+                model.collectionSpread
+                    |> View.CollectionSpread.update CollectionSpreadMsg msg_
+                    |> Tuple.mapFirst
+                        (\collectionSpread -> { model | collectionSpread = collectionSpread })
+
+            IndexMsg msg_ ->
+                model.index
+                    |> View.Index.update IndexMsg viewConfig msg_
+                    |> Tuple.mapFirst
+                        (\index -> { model | index = index })
+
+            BulletMsg msg_ ->
+                model.bullet
+                    |> View.Bullet.update BulletMsg msg_
+                    |> Tuple.mapFirst
+                        (\bullet -> { model | bullet = bullet })
+
+            NewBulletMsg msg_ ->
+                model.newBullet
+                    |> Maybe.map (View.NewBullet.update NewBulletMsg viewConfig msg_)
+                    |> Maybe.map
+                        (Tuple.mapFirst
+                            (\newBullet -> { model | newBullet = Just newBullet })
+                        )
+                    |> Maybe.withDefault ( model, Cmd.none )
+
+            TodayChanged today ->
+                ( { model | today = today }, Cmd.none )
+
+            NowChanged now ->
+                ( { model | now = now }, Cmd.none )
+
+            BackClicked ->
+                ( model
+                , Navigation.newUrl (Url.toString Url.Index)
                 )
-            )
-
-        CollectionSpreadClicked collectionSpread ->
-            ( model
-            , Navigation.newUrl (Url.toString (Url.CollectionSpread collectionSpread.id))
-            )
-
-        BackClicked ->
-            ( model
-            , Navigation.newUrl (Url.toString Url.Index)
-            )
 
 
-
---
---
---persist : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
---persist ( model, cmd ) =
---    let
---        monthlySpreads =
---            model.monthlySpreads
---                |> Dict.values
---                |> List.map
---                    (\monthlySpread ->
---                        { year = monthlySpread.year
---                        , month = monthlySpread.month
---                        , items =
---                            monthlySpread.items
---                                |> Dict.toList
---                                |> List.map
---                                    (\( dayOfMonth, text ) ->
---                                        { dayOfMonth = dayOfMonth, text = text }
---                                    )
---                        , bullets = monthlySpread.bullets
---                        }
---                    )
---
---        dailySpreads =
---            model.dailySpreads
---                |> Dict.values
---                |> List.map
---                    (\dailySpread ->
---                        { year = dailySpread.year
---                        , month = dailySpread.month
---                        , dayOfMonth = dailySpread.dayOfMonth
---                        , bullets = dailySpread.bullets
---                        }
---                    )
---
---        collectionSpreads =
---            model.collectionSpreads
---                |> Dict.values
---                |> List.map
---                    (\collectionSpread ->
---                        { id = collectionSpread.id
---                        , createdDate = collectionSpread.createdDate
---                        , title = collectionSpread.title
---                        , bullets = collectionSpread.bullets
---                        }
---                    )
---
---        state =
---            { monthlySpreads = monthlySpreads
---            , dailySpreads = dailySpreads
---            , collectionSpreads = collectionSpreads
---            }
---    in
---        ( model, Cmd.batch [ Ports.persist state, cmd ] )
+makeViewConfig : Model -> View.Config Msg
+makeViewConfig model =
+    let
+        parseConfig =
+            Parse.simpleConfig "bujo" "bujo"
+                |> \config ->
+                    { config | serverUrl = "http://localhost:1337/parse" }
+    in
+        { toolbar =
+            \config ->
+                Toolbar.view Mdc
+                    "toolbar"
+                    model.mdc
+                    []
+                    [ Toolbar.row []
+                        (Toolbar.section
+                            [ Toolbar.alignStart
+                            ]
+                            [ if model.url == Url.Index then
+                                Icon.view
+                                    [ Toolbar.menuIcon
+                                    ]
+                                    "menu"
+                              else
+                                Icon.view
+                                    [ Toolbar.menuIcon
+                                    , Options.onClick BackClicked
+                                    ]
+                                    "arrow_back"
+                            , Toolbar.title [] [ text "bujo" ]
+                            ]
+                            :: config.additionalSections
+                        )
+                    ]
+        , today = model.today
+        , now = model.now
+        , parse = parseConfig
+        }
 
 
 view : Model -> Html Msg
 view model =
     let
         viewConfig =
-            { toolbar =
-                \config ->
-                    Toolbar.view Mdc
-                        "toolbar"
-                        model.mdc
-                        []
-                        [ Toolbar.row []
-                            (Toolbar.section
-                                [ Toolbar.alignStart
-                                ]
-                                [ if model.url == Url.Index then
-                                    Icon.view
-                                        [ Toolbar.menuIcon
-                                        ]
-                                        "menu"
-                                  else
-                                    Icon.view
-                                        [ Toolbar.menuIcon
-                                        , Options.onClick BackClicked
-                                        ]
-                                        "arrow_back"
-                                , Toolbar.title [] [ text "bujo" ]
-                                ]
-                                :: config.additionalSections
-                            )
-                        ]
-            }
+            makeViewConfig model
     in
         Html.div
             [ Html.class "main"
@@ -451,51 +330,37 @@ view model =
                     Url.Index ->
                         viewIndex viewConfig model
 
-                    Url.MonthlySpread year month ->
-                        viewMonthlySpread viewConfig year month model
+                    Url.MonthlySpread objectId ->
+                        viewMonthlySpread viewConfig model
 
-                    Url.DailySpread year month dayOfMonth ->
-                        viewDailySpread viewConfig year month dayOfMonth model
+                    Url.DailySpread objectId ->
+                        viewDailySpread viewConfig model
 
-                    Url.CollectionSpread id ->
-                        viewCollectionSpread viewConfig id model
+                    Url.CollectionSpread objectId ->
+                        viewCollectionSpread viewConfig model
 
                     Url.NotFound urlString ->
                         viewNotFound viewConfig urlString model
+
+                    Url.NewBullet route className objectId ->
+                        viewNewBullet viewConfig model
                 ]
             ]
 
 
-viewMonthlySpread :
-    View.Config Msg
-    -> MonthlySpread.Year
-    -> MonthlySpread.Month
-    -> Model
-    -> Html Msg
-viewMonthlySpread viewConfig year month model =
-    View.MonthlySpread.view MonthlySpreadMsg
-        viewConfig
-        model.monthlySpread
+viewMonthlySpread : View.Config Msg -> Model -> Html Msg
+viewMonthlySpread viewConfig model =
+    View.MonthlySpread.view MonthlySpreadMsg viewConfig model.monthlySpread
 
 
-viewDailySpread :
-    View.Config Msg
-    -> DailySpread.Year
-    -> DailySpread.Month
-    -> DailySpread.DayOfMonth
-    -> Model
-    -> Html Msg
-viewDailySpread viewConfig year month dayOfMonth model =
-    View.DailySpread.view DailySpreadMsg
-        viewConfig
-        model.dailySpread
+viewDailySpread : View.Config Msg -> Model -> Html Msg
+viewDailySpread viewConfig model =
+    View.DailySpread.view DailySpreadMsg viewConfig model.dailySpread
 
 
-viewCollectionSpread : View.Config Msg -> CollectionSpread.Id -> Model -> Html Msg
-viewCollectionSpread viewConfig id model =
-    View.CollectionSpread.view CollectionSpreadMsg
-        viewConfig
-        model.collectionSpread
+viewCollectionSpread : View.Config Msg -> Model -> Html Msg
+viewCollectionSpread viewConfig model =
+    View.CollectionSpread.view CollectionSpreadMsg viewConfig model.collectionSpread
 
 
 viewNotFound : View.Config Msg -> String -> Model -> Html Msg
@@ -512,167 +377,11 @@ viewNotFound viewConfig urlString model =
 
 viewIndex : View.Config Msg -> Model -> Html Msg
 viewIndex viewConfig model =
-    Html.div
-        []
-        [ viewConfig.toolbar
-            { additionalSections = []
-            }
-        , index model
-        , newSpreadDialog model
-        ]
+    View.Index.view IndexMsg viewConfig model.index
 
 
-index : Model -> Html Msg
-index model =
-    --    let
-    --        monthlySpreads =
-    --            List.map
-    --                (\monthlySpread ->
-    --                    ( MonthlySpread.canonicalDate monthlySpread
-    --                    , Lists.li
-    --                        [ Options.onClick (MonthlySpreadClicked monthlySpread)
-    --                        ]
-    --                        [ text (MonthlySpread.title monthlySpread)
-    --                        ]
-    --                    )
-    --                )
-    --                (Dict.values model.monthlySpreads)
-    --
-    --        dailySpreads =
-    --            List.map
-    --                (\dailySpread ->
-    --                    ( DailySpread.canonicalDate dailySpread
-    --                    , Lists.li
-    --                        [ Options.onClick (DailySpreadClicked dailySpread)
-    --                        ]
-    --                        [ text (DailySpread.title dailySpread)
-    --                        ]
-    --                    )
-    --                )
-    --                (Dict.values model.dailySpreads)
-    --
-    --        collectionSpreads =
-    --            List.map
-    --                (\collectionSpread ->
-    --                    ( CollectionSpread.canonicalDate collectionSpread
-    --                    , Lists.li
-    --                        [ Options.onClick (CollectionSpreadClicked collectionSpread)
-    --                        ]
-    --                        [ text (CollectionSpread.title collectionSpread)
-    --                        ]
-    --                    )
-    --                )
-    --                (Dict.values model.collectionSpreads)
-    --    in
-    Html.div
-        [ Html.class "index"
-        ]
-        [ Html.div
-            [ Html.class "index__title"
-            ]
-            [ Html.h1 []
-                [ text "Index" ]
-            ]
-        , Lists.ol
-            []
-            (List.map Tuple.second <|
-                List.sortBy Tuple.first <|
-                    []
-             --                        List.concat
-             --                            [ monthlySpreads
-             --                            , dailySpreads
-             --                            , collectionSpreads
-             --                            ]
-            )
-        , Fab.view Mdc
-            "index__new-spread"
-            model.mdc
-            [ cs "index__new-spread"
-            , Fab.ripple
-            , Options.onClick NewSpreadClicked
-            ]
-            "add"
-        ]
-
-
-newSpreadDialog : Model -> Html Msg
-newSpreadDialog model =
-    let
-        ( year, month, dayOfMonth ) =
-            Calendar.toGregorian model.today
-
-        monthName =
-            case Calendar.defaultTimeLocale of
-                Calendar.TimeLocale { months } ->
-                    List.head (List.drop (month - 1) months)
-                        |> Maybe.map Tuple.first
-                        |> Maybe.withDefault ""
-
-        monthlySpreadName =
-            monthName ++ " " ++ toString year
-
-        dailySpreadName =
-            String.join " "
-                [ toString dayOfMonth
-                , monthName
-                , toString year
-                ]
-    in
-        Dialog.view Mdc
-            "new-spread-dialog"
-            model.mdc
-            [ Dialog.onClose NewSpreadDialogClosed
-            , when model.showNewSpreadDialog Dialog.open
-            ]
-            [ Dialog.surface []
-                [ Dialog.header []
-                    []
-                , Dialog.body []
-                    [ Lists.ul
-                        [ Lists.twoLine
-                        ]
-                        [ Lists.li
-                            [ Options.onClick NewMonthlySpreadClicked
-                            , Options.attribute (Html.tabindex 0)
-                            ]
-                            [ Lists.text []
-                                [ text "New monthly spread"
-                                , Lists.secondaryText []
-                                    [ text monthlySpreadName
-                                    ]
-                                ]
-                            ]
-                        , Lists.li
-                            [ Options.onClick NewDailySpreadClicked
-                            , Options.attribute (Html.tabindex 0)
-                            ]
-                            [ Lists.text []
-                                [ text "New daily spread"
-                                , Lists.secondaryText []
-                                    [ text dailySpreadName
-                                    ]
-                                ]
-                            ]
-                        , Lists.li
-                            [ Options.onClick NewCollectionSpreadClicked
-                            , Options.attribute (Html.tabindex 0)
-                            ]
-                            [ Lists.text []
-                                [ text "New collection"
-                                ]
-                            ]
-                        ]
-                    ]
-                , Dialog.footer []
-                    [ Button.view Mdc
-                        "new-spread-dialog__cancel"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick NewSpreadDialogClosed
-                        , Dialog.cancel
-                        ]
-                        [ text "Cancel"
-                        ]
-                    ]
-                ]
-            ]
+viewNewBullet : View.Config Msg -> Model -> Html Msg
+viewNewBullet viewConfig model =
+    model.newBullet
+        |> Maybe.map (View.NewBullet.view NewBulletMsg viewConfig)
+        |> Maybe.withDefault (text "")

@@ -3,12 +3,16 @@
 }
 
 @import "@material/theme/mdc-theme";
+@import "@material/theme/mixins";
 
 @import "@material/button/mdc-button";
+@import "@material/checkbox/mdc-checkbox";
 @import "@material/dialog/mdc-dialog";
 @import "@material/fab/mdc-fab";
 @import "@material/list/mdc-list";
 @import "@material/menu/mdc-menu";
+@import "@material/select/mdc-select";
+@import "@material/textfield/mdc-text-field";
 @import "@material/toolbar/mdc-toolbar";
 @import "@material/typography/mdc-typography";
 
@@ -30,4 +34,11 @@
   margin-left: auto;
   margin-right: auto;
   padding-top: 48px;
+}
+
+.mdc-toolbar {
+  .mdc-button {
+    @include mdc-theme-prop(color, text-primary-on-dark);
+    align-self: center;
+  }
 }
