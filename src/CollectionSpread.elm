@@ -14,6 +14,49 @@ type alias Model =
     }
 
 
+canonicalDate : Model -> ( Int, Int, Int )
+canonicalDate model =
+    ( Date.year model.createdDate
+    , case Date.month model.createdDate of
+        Date.Jan ->
+            1
+
+        Date.Feb ->
+            2
+
+        Date.Mar ->
+            3
+
+        Date.Apr ->
+            4
+
+        Date.May ->
+            5
+
+        Date.Jun ->
+            6
+
+        Date.Jul ->
+            7
+
+        Date.Aug ->
+            8
+
+        Date.Sep ->
+            9
+
+        Date.Oct ->
+            10
+
+        Date.Nov ->
+            11
+
+        Date.Dec ->
+            12
+    , Date.day model.createdDate
+    )
+
+
 empty : Id -> Date -> Model
 empty id date =
     { id = id

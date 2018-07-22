@@ -28,6 +28,11 @@ empty year month dayOfMonth =
     }
 
 
+canonicalDate : Model -> ( Int, Int, Int )
+canonicalDate model =
+    ( model.year, model.month, model.dayOfMonth )
+
+
 type alias Month =
     Int
 

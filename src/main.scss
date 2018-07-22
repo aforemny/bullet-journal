@@ -9,8 +9,25 @@
 @import "@material/fab/mdc-fab";
 @import "@material/list/mdc-list";
 @import "@material/menu/mdc-menu";
+@import "@material/toolbar/mdc-toolbar";
 @import "@material/typography/mdc-typography";
 
 @import "daily-spread";
 @import "index";
 @import "monthly-spread";
+
+
+.main {
+  display: flex;
+  flex-flow: column nowrap;
+}
+
+.main__wrapper {
+  display: flex;
+  flex-flow: column nowrap;
+  width: 100%;
+  max-width: 1140px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: 48px;
+}

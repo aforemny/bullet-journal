@@ -19,6 +19,11 @@ type alias Model =
     }
 
 
+canonicalDate : Model -> ( Int, Int, Int )
+canonicalDate model =
+    ( model.year, model.month, 0 )
+
+
 empty : Year -> Month -> Model
 empty year month =
     { year = year

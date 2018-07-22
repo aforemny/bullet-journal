@@ -1,5 +1,9 @@
 .index {
 
+  &__title {
+    @include mdc-typography(headline6);
+  }
+
   &__new-spread {
     position: fixed;
     bottom: 60px;

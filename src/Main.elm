@@ -12,14 +12,17 @@ import Material
 import Material.Button as Button
 import Material.Dialog as Dialog
 import Material.Fab as Fab
+import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Toolbar as Toolbar
 import MonthlySpread
 import Navigation
 import Ports
 import State exposing (State)
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
+import Time.Format.Locale as Calendar
 import Url exposing (Url)
 
 
@@ -65,6 +68,7 @@ type Msg
     | MonthlySpreadClicked MonthlySpread.Model
     | DailySpreadClicked DailySpread.Model
     | CollectionSpreadClicked CollectionSpread.Model
+    | BackClicked
 
 
 type alias Flags =
@@ -167,7 +171,7 @@ init flags location =
         ( { defaultModel
             | today = Ports.readDayUnsafe flags.today
             , now = Ports.readDateUnsafe flags.now
-            , url = Debug.log "url" (Url.fromLocation location)
+            , url = Url.fromLocation location
             , monthlySpreads = monthlySpreads
             , dailySpreads = dailySpreads
             , collectionSpreads = collectionSpreads
@@ -254,18 +258,18 @@ update msg model =
                     newMonthlySpread =
                         MonthlySpread.empty year month
                 in
-                    if not (Dict.member ( year, month ) model.monthlySpreads) then
-                        ( { model
-                            | showNewSpreadDialog = False
-                            , monthlySpreads =
+                    ( { model
+                        | showNewSpreadDialog = False
+                        , monthlySpreads =
+                            if not (Dict.member ( year, month ) model.monthlySpreads) then
                                 Dict.insert ( year, month )
                                     newMonthlySpread
                                     model.monthlySpreads
-                          }
-                        , Navigation.newUrl (Url.toString (Url.MonthlySpread year month))
-                        )
-                    else
-                        ( model, Cmd.none )
+                            else
+                                model.monthlySpreads
+                      }
+                    , Navigation.newUrl (Url.toString (Url.MonthlySpread year month))
+                    )
 
             NewDailySpreadClicked ->
                 let
@@ -275,19 +279,19 @@ update msg model =
                     newDailySpread =
                         DailySpread.empty year month dayOfMonth
                 in
-                    if not (Dict.member ( year, month, dayOfMonth ) model.dailySpreads) then
-                        ( { model
-                            | showNewSpreadDialog = False
-                            , dailySpreads =
+                    ( { model
+                        | showNewSpreadDialog = False
+                        , dailySpreads =
+                            if not (Dict.member ( year, month, dayOfMonth ) model.dailySpreads) then
                                 Dict.insert ( year, month, dayOfMonth )
                                     newDailySpread
                                     model.dailySpreads
-                          }
-                        , Navigation.newUrl
-                            (Url.toString (Url.DailySpread year month dayOfMonth))
-                        )
-                    else
-                        ( model, Cmd.none )
+                            else
+                                model.dailySpreads
+                      }
+                    , Navigation.newUrl
+                        (Url.toString (Url.DailySpread year month dayOfMonth))
+                    )
 
             NewCollectionSpreadClicked ->
                 let
@@ -341,6 +345,11 @@ update msg model =
             CollectionSpreadClicked collectionSpread ->
                 ( model
                 , Navigation.newUrl (Url.toString (Url.CollectionSpread collectionSpread.id))
+                )
+
+            BackClicked ->
+                ( model
+                , Navigation.newUrl (Url.toString Url.Index)
                 )
 
 
@@ -400,21 +409,52 @@ persist ( model, cmd ) =
 
 view : Model -> Html Msg
 view model =
-    case model.url of
-        Url.Index ->
-            viewIndex model
+    Html.div
+        [ Html.class "main"
+        ]
+        [ Toolbar.view Mdc
+            "toolbar"
+            model.mdc
+            []
+            [ Toolbar.row []
+                [ Toolbar.section
+                    [ Toolbar.alignStart
+                    ]
+                    [ if model.url == Url.Index then
+                        Icon.view
+                            [ Toolbar.menuIcon
+                            ]
+                            "menu"
+                      else
+                        Icon.view
+                            [ Toolbar.menuIcon
+                            , Options.onClick BackClicked
+                            ]
+                            "arrow_back"
+                    , Toolbar.title [] [ text "bujo" ]
+                    ]
+                ]
+            ]
+        , Html.div
+            [ Html.class "main__wrapper"
+            ]
+            [ case model.url of
+                Url.Index ->
+                    viewIndex model
 
-        Url.MonthlySpread year month ->
-            viewMonthlySpread year month model
+                Url.MonthlySpread year month ->
+                    viewMonthlySpread year month model
 
-        Url.DailySpread year month dayOfMonth ->
-            viewDailySpread year month dayOfMonth model
+                Url.DailySpread year month dayOfMonth ->
+                    viewDailySpread year month dayOfMonth model
 
-        Url.CollectionSpread id ->
-            viewCollectionSpread id model
+                Url.CollectionSpread id ->
+                    viewCollectionSpread id model
 
-        Url.NotFound urlString ->
-            viewNotFound urlString model
+                Url.NotFound urlString ->
+                    viewNotFound urlString model
+            ]
+        ]
 
 
 viewMonthlySpread : MonthlySpread.Year -> MonthlySpread.Month -> Model -> Html Msg
@@ -469,109 +509,154 @@ viewIndex model =
 
 index : Model -> Html Msg
 index model =
-    Html.div
-        [ Html.class "index"
-        ]
-        [ Html.div
-            [ Html.class "index__title"
-            ]
-            [ Html.h1 []
-                [ text "Index" ]
-            ]
-        , Html.ol
-            [ Html.class "index__wrapper"
-            ]
-            (List.concat
-                [ List.map
-                    (\monthlySpread ->
-                        Html.li
-                            [ Html.onClick (MonthlySpreadClicked monthlySpread)
-                            ]
-                            [ text (MonthlySpread.title monthlySpread)
-                            ]
+    let
+        monthlySpreads =
+            List.map
+                (\monthlySpread ->
+                    ( MonthlySpread.canonicalDate monthlySpread
+                    , Lists.li
+                        [ Options.onClick (MonthlySpreadClicked monthlySpread)
+                        ]
+                        [ text (MonthlySpread.title monthlySpread)
+                        ]
                     )
-                    (Dict.values model.monthlySpreads)
-                , List.map
-                    (\dailySpread ->
-                        Html.li
-                            [ Html.onClick (DailySpreadClicked dailySpread)
-                            ]
-                            [ text (DailySpread.title dailySpread)
-                            ]
+                )
+                (Dict.values model.monthlySpreads)
+
+        dailySpreads =
+            List.map
+                (\dailySpread ->
+                    ( DailySpread.canonicalDate dailySpread
+                    , Lists.li
+                        [ Options.onClick (DailySpreadClicked dailySpread)
+                        ]
+                        [ text (DailySpread.title dailySpread)
+                        ]
                     )
-                    (Dict.values model.dailySpreads)
-                , List.map
-                    (\collectionSpread ->
-                        Html.li
-                            [ Html.onClick (CollectionSpreadClicked collectionSpread)
-                            ]
-                            [ text (CollectionSpread.title collectionSpread)
-                            ]
+                )
+                (Dict.values model.dailySpreads)
+
+        collectionSpreads =
+            List.map
+                (\collectionSpread ->
+                    ( CollectionSpread.canonicalDate collectionSpread
+                    , Lists.li
+                        [ Options.onClick (CollectionSpreadClicked collectionSpread)
+                        ]
+                        [ text (CollectionSpread.title collectionSpread)
+                        ]
                     )
-                    (Dict.values model.collectionSpreads)
+                )
+                (Dict.values model.collectionSpreads)
+    in
+        Html.div
+            [ Html.class "index"
+            ]
+            [ Html.div
+                [ Html.class "index__title"
                 ]
-            )
-        , Fab.view Mdc
-            "index__new-spread"
-            model.mdc
-            [ cs "index__new-spread"
-            , Fab.ripple
-            , Options.onClick NewSpreadClicked
+                [ Html.h1 []
+                    [ text "Index" ]
+                ]
+            , Lists.ol
+                []
+                (List.map Tuple.second <|
+                    List.sortBy Tuple.first <|
+                        List.concat
+                            [ monthlySpreads
+                            , dailySpreads
+                            , collectionSpreads
+                            ]
+                )
+            , Fab.view Mdc
+                "index__new-spread"
+                model.mdc
+                [ cs "index__new-spread"
+                , Fab.ripple
+                , Options.onClick NewSpreadClicked
+                ]
+                "add"
             ]
-            "add"
-        ]
 
 
 newSpreadDialog : Model -> Html Msg
 newSpreadDialog model =
-    Dialog.view Mdc
-        "new-spread-dialog"
-        model.mdc
-        [ Dialog.onClose NewSpreadDialogClosed
-        , when model.showNewSpreadDialog Dialog.open
-        ]
-        [ Dialog.surface []
-            [ Dialog.header []
-                []
-            , Dialog.body []
-                [ Lists.ul
-                    []
-                    [ Lists.li
-                        [ Options.onClick NewMonthlySpreadClicked
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New monthly spread"
-                            ]
-                        ]
-                    , Lists.li
-                        [ Options.onClick NewDailySpreadClicked
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New daily spread"
-                            ]
-                        ]
-                    , Lists.li
-                        [ Options.onClick NewCollectionSpreadClicked
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New collection"
-                            ]
-                        ]
-                    ]
+    let
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian model.today
+
+        monthName =
+            case Calendar.defaultTimeLocale of
+                Calendar.TimeLocale { months } ->
+                    List.head (List.drop (month - 1) months)
+                        |> Maybe.map Tuple.first
+                        |> Maybe.withDefault ""
+
+        monthlySpreadName =
+            monthName ++ " " ++ toString year
+
+        dailySpreadName =
+            String.join " "
+                [ toString dayOfMonth
+                , monthName
+                , toString year
                 ]
-            , Dialog.footer []
-                [ Button.view Mdc
-                    "new-spread-dialog__cancel"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.onClick NewSpreadDialogClosed
-                    , Dialog.cancel
+    in
+        Dialog.view Mdc
+            "new-spread-dialog"
+            model.mdc
+            [ Dialog.onClose NewSpreadDialogClosed
+            , when model.showNewSpreadDialog Dialog.open
+            ]
+            [ Dialog.surface []
+                [ Dialog.header []
+                    []
+                , Dialog.body []
+                    [ Lists.ul
+                        [ Lists.twoLine
+                        ]
+                        [ Lists.li
+                            [ Options.onClick NewMonthlySpreadClicked
+                            , Options.attribute (Html.tabindex 0)
+                            ]
+                            [ Lists.text []
+                                [ text "New monthly spread"
+                                , Lists.secondaryText []
+                                    [ text monthlySpreadName
+                                    ]
+                                ]
+                            ]
+                        , Lists.li
+                            [ Options.onClick NewDailySpreadClicked
+                            , Options.attribute (Html.tabindex 0)
+                            ]
+                            [ Lists.text []
+                                [ text "New daily spread"
+                                , Lists.secondaryText []
+                                    [ text dailySpreadName
+                                    ]
+                                ]
+                            ]
+                        , Lists.li
+                            [ Options.onClick NewCollectionSpreadClicked
+                            , Options.attribute (Html.tabindex 0)
+                            ]
+                            [ Lists.text []
+                                [ text "New collection"
+                                ]
+                            ]
+                        ]
                     ]
-                    [ text "Cancel"
+                , Dialog.footer []
+                    [ Button.view Mdc
+                        "new-spread-dialog__cancel"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.onClick NewSpreadDialogClosed
+                        , Dialog.cancel
+                        ]
+                        [ text "Cancel"
+                        ]
                     ]
                 ]
             ]
-        ]
