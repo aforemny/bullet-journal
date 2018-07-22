@@ -5,235 +5,196 @@ import Html.Attributes as Html
 import Html.Events as Html
 import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder)
+import Material
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
 import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
+import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
+import View
 
 
-type alias Model =
-    { year : Year
-    , month : Month
-    , items : Dict DayOfMonth String
-    , bullets : List Bullet
+type alias Model msg =
+    { mdc : Material.Model msg
     }
 
 
-canonicalDate : Model -> ( Int, Int, Int )
-canonicalDate model =
-    ( model.year, model.month, 0 )
-
-
-empty : Year -> Month -> Model
-empty year month =
-    { year = year
-    , month = month
-    , items = Dict.empty
-    , bullets = []
+defaultModel : Model msg
+defaultModel =
+    { mdc = Material.defaultModel
     }
 
 
-type alias Month =
-    Int
+type Msg msg
+    = Mdc (Material.Msg msg)
 
 
-type alias Year =
-    Int
 
-
-type alias DayOfMonth =
-    Int
-
-
-type Msg
-    = ItemChanged DayOfMonth String
-    | BulletChanged Index String
+--    | ItemChanged MonthlySpread.DayOfMonth String
+--    | BulletChanged Index String
 
 
 type alias Index =
     Int
 
 
-update : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
+init lift =
+  Cmd.none
+
+
+subscriptions lift model =
+  Material.subscriptions (lift << Mdc) model
+
+
+update : (Msg msg -> msg) -> Msg msg -> Model msg -> ( Model msg, Cmd msg )
 update lift msg model =
     case msg of
-        ItemChanged dayOfMonth input ->
-            ( { model | items = Dict.insert dayOfMonth input model.items }, Cmd.none )
-
-        BulletChanged index input ->
-            let
-                numBullets =
-                    List.length model.bullets
-            in
-                (model.bullets
-                    |> \bullets ->
-                        if numBullets < index + 1 then
-                            bullets ++ List.repeat (index - numBullets + 1) (Bullet.Note { text = "" })
-                        else
-                            bullets
-                )
-                    |> List.indexedMap
-                        (\otherIndex bullet ->
-                            if otherIndex == index then
-                                Bullet.Note { text = input }
-                            else
-                                bullet
-                        )
-                    |> \bullets ->
-                        ( { model | bullets = bullets }, Cmd.none )
+        Mdc msg_ ->
+            Material.update (lift << Mdc) msg_ model
 
 
-view : (Msg -> msg) -> Model -> Html msg
-view lift model =
-    Html.div
-        [ Html.class "monthly-spread" ]
-        [ Html.h1
-            [ Html.class "monthly-spread__title"
-            ]
-            [ text (title model)
-            ]
-        , Html.div
-            [ Html.class "monthly-spread__wrapper"
-            ]
-            [ Html.ol
-                [ Html.class "monthly-spread__item-wrapper"
+
+--        ItemChanged dayOfMonth input ->
+--            ( { model | items = Dict.insert dayOfMonth input monthlySpread.items }, Cmd.none )
+--
+--        BulletChanged index input ->
+--            let
+--                numBullets =
+--                    List.length monthlySpread.bullets
+--            in
+--                (monthlySpread.bullets
+--                    |> \bullets ->
+--                        if numBullets < index + 1 then
+--                            bullets ++ List.repeat (index - numBullets + 1) (Bullet.Note { text = "" })
+--                        else
+--                            bullets
+--                )
+--                    |> List.indexedMap
+--                        (\otherIndex bullet ->
+--                            if otherIndex == index then
+--                                Bullet.Note { text = input }
+--                            else
+--                                bullet
+--                        )
+--                    |> \bullets ->
+--                        ( { model | bullets = bullets }, Cmd.none )
+
+
+view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view lift viewConfig model =
+    let
+        monthlySpread =
+            MonthlySpread.empty 2018 7
+    in
+        Html.div
+            [ Html.class "monthly-spread" ]
+            [ viewConfig.toolbar
+                { additionalSections = []
+                }
+            , Html.h1
+                [ Html.class "monthly-spread__title"
                 ]
-                (List.map
-                    (\dayOfMonth ->
-                        let
-                            day =
-                                Calendar.fromGregorian
-                                    model.year
-                                    model.month
-                                    dayOfMonth
+                [ text (MonthlySpread.title monthlySpread)
+                ]
+            , Html.div
+                [ Html.class "monthly-spread__wrapper"
+                ]
+                [ Html.ol
+                    [ Html.class "monthly-spread__item-wrapper"
+                    ]
+                    (List.map
+                        (\dayOfMonth ->
+                            let
+                                day =
+                                    Calendar.fromGregorian
+                                        monthlySpread.year
+                                        monthlySpread.month
+                                        dayOfMonth
 
-                            dayOfWeek =
-                                Calendar.dayOfWeek day
+                                dayOfWeek =
+                                    Calendar.dayOfWeek day
 
-                            item =
-                                Dict.get dayOfMonth model.items
-                                    |> Maybe.withDefault ""
-                        in
-                            Html.li
-                                [ Html.class "monthly-spread__item"
-                                ]
-                                [ Html.span
-                                    [ Html.class "monthly-spread__item__day-of-month"
+                                item =
+                                    Dict.get dayOfMonth monthlySpread.items
+                                        |> Maybe.withDefault ""
+                            in
+                                Html.li
+                                    [ Html.class "monthly-spread__item"
                                     ]
-                                    [ text (toString dayOfMonth)
+                                    [ Html.span
+                                        [ Html.class "monthly-spread__item__day-of-month"
+                                        ]
+                                        [ text (toString dayOfMonth)
+                                        ]
+                                    , Html.span
+                                        [ Html.class "monthly-spread__item__day-of-week"
+                                        ]
+                                        [ text
+                                            (case dayOfWeek of
+                                                Calendar.Monday ->
+                                                    "M"
+
+                                                Calendar.Tuesday ->
+                                                    "T"
+
+                                                Calendar.Wednesday ->
+                                                    "W"
+
+                                                Calendar.Thursday ->
+                                                    "T"
+
+                                                Calendar.Friday ->
+                                                    "F"
+
+                                                Calendar.Saturday ->
+                                                    "S"
+
+                                                Calendar.Sunday ->
+                                                    "S"
+                                            )
+                                        ]
+                                    , Html.input
+                                        [ Html.class "monthly-spread__item__text"
+                                        , Html.value item
+                                          -- , Html.onInput (lift << ItemChanged dayOfMonth)
+                                        ]
+                                        []
                                     ]
-                                , Html.span
-                                    [ Html.class "monthly-spread__item__day-of-week"
-                                    ]
-                                    [ text
-                                        (case dayOfWeek of
-                                            Calendar.Monday ->
-                                                "M"
-
-                                            Calendar.Tuesday ->
-                                                "T"
-
-                                            Calendar.Wednesday ->
-                                                "W"
-
-                                            Calendar.Thursday ->
-                                                "T"
-
-                                            Calendar.Friday ->
-                                                "F"
-
-                                            Calendar.Saturday ->
-                                                "S"
-
-                                            Calendar.Sunday ->
-                                                "S"
-                                        )
-                                    ]
-                                , Html.input
-                                    [ Html.class "monthly-spread__item__text"
-                                    , Html.value item
-                                    , Html.onInput (lift << ItemChanged dayOfMonth)
-                                    ]
-                                    []
-                                ]
-                    )
-                    (List.range 1
-                        (Calendar.monthLength
-                            (Calendar.isLeapYear model.year)
-                            model.month
+                        )
+                        (List.range 1
+                            (Calendar.monthLength
+                                (Calendar.isLeapYear monthlySpread.year)
+                                monthlySpread.month
+                            )
                         )
                     )
-                )
-            , Html.ol
-                [ Html.class "monthly-spread__bullet-wrapper"
-                ]
-                (List.indexedMap
-                    (\index bullet ->
-                        let
-                            value =
-                                case bullet of
-                                    Bullet.Task { text } ->
-                                        text
+                , Html.ol
+                    [ Html.class "monthly-spread__bullet-wrapper"
+                    ]
+                    (List.indexedMap
+                        (\index bullet ->
+                            let
+                                value =
+                                    case bullet of
+                                        Bullet.Task { text } ->
+                                            text
 
-                                    Bullet.Event { text } ->
-                                        text
+                                        Bullet.Event { text } ->
+                                            text
 
-                                    Bullet.Note { text } ->
-                                        text
-                        in
-                            Bullet.view
-                                { node = Html.li
-                                , additionalAttributes =
-                                    [ Html.class "monthly-spread__bullet"
-                                    ]
-                                }
-                                bullet
+                                        Bullet.Note { text } ->
+                                            text
+                            in
+                                Bullet.view
+                                    { node = Html.li
+                                    , additionalAttributes =
+                                        [ Html.class "monthly-spread__bullet"
+                                        ]
+                                    }
+                                    bullet
+                        )
+                        (monthlySpread.bullets ++ [ Bullet.Note { text = "" } ])
                     )
-                    (model.bullets ++ [ Bullet.Note { text = "" } ])
-                )
+                ]
             ]
-        ]
-
-
-title : Model -> String
-title model =
-    String.join " "
-        [ case model.month of
-            1 ->
-                "January"
-
-            2 ->
-                "February"
-
-            3 ->
-                "March"
-
-            4 ->
-                "April"
-
-            5 ->
-                "Mai"
-
-            6 ->
-                "June"
-
-            7 ->
-                "July"
-
-            8 ->
-                "August"
-
-            9 ->
-                "September"
-
-            10 ->
-                "October"
-
-            11 ->
-                "November"
-
-            _ ->
-                "December"
-        , toString model.year
-        ]
