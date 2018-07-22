@@ -1,0 +1,25 @@
+.daily-spread {
+
+  &__bullet-wrapper {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+
+  }
+
+  &__item {
+  }
+
+  &__item__day-of-month {
+    width: 20px;
+    overflow: hidden;
+  }
+
+  &__item__day-of-week {
+    width: 20px;
+    overflow: hidden;
+  }
+
+  &__item__text {
+  }
+}

@@ -1,0 +1,16 @@
+* {
+  box-sizing: border-box;
+}
+
+@import "@material/theme/mdc-theme";
+
+@import "@material/button/mdc-button";
+@import "@material/dialog/mdc-dialog";
+@import "@material/fab/mdc-fab";
+@import "@material/list/mdc-list";
+@import "@material/menu/mdc-menu";
+@import "@material/typography/mdc-typography";
+
+@import "daily-spread";
+@import "index";
+@import "monthly-spread";

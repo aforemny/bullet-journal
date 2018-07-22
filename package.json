@@ -1,0 +1,30 @@
+{
+  "name": "bujo",
+  "version": "1.0.0",
+  "description": "bullet journal",
+  "main": "elm.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com:aforemny/bujo.git"
+  },
+  "keywords": [
+    "bullet",
+    "journal"
+  ],
+  "author": "Alexander Foremny <aforemny@posteo.de>",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "@material/button": "^0.37.1",
+    "@material/dialog": "^0.37.1",
+    "@material/fab": "^0.37.1",
+    "@material/list": "^0.37.1",
+    "@material/menu": "^0.37.1",
+    "@material/theme": "^0.35.0",
+    "@material/typography": "^0.37.1",
+    "material-design-icons": "^3.0.1",
+    "normalize.css": "^8.0.0"
+  }
+}
