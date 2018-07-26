@@ -301,8 +301,9 @@ view model =
         viewConfig =
             makeViewConfig model
     in
-        Html.div
-            [ Html.class "main"
+        styled Html.div
+            [ cs "main"
+            , Toolbar.fixedAdjust "toolbar" model.mdc
             ]
             [ Html.div
                 [ Html.class "main__wrapper"

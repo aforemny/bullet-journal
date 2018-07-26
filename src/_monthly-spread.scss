@@ -5,27 +5,33 @@
     flex-flow: row nowrap;
   }
 
-  &__item-wrapper,
-  &__bullet-wrapper {
+  &__days-wrapper,
+  &__bullets-wrapper {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    width: 50%;
 
   }
 
-  &__item {
+  &__day {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
   }
 
-  &__item__day-of-month {
-    width: 20px;
+  &__day__day-of-month {
+    display: inline-block;
+    width: 32px;
     overflow: hidden;
   }
 
-  &__item__day-of-week {
-    width: 20px;
+  &__day__day-of-week {
+    display: inline-block;
+    width: 32px;
     overflow: hidden;
   }
 
-  &__item__text {
+  &__day__text {
   }
 }

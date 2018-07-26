@@ -209,75 +209,14 @@ view lift viewConfig model =
                 [ Html.class "monthly-spread__wrapper"
                 ]
                 [ Html.ol
-                    [ Html.class "monthly-spread__item-wrapper"
+                    [ Html.class "monthly-spread__days-wrapper"
                     ]
                     (monthlySpread
                         |> Maybe.map
                             (\monthlySpread ->
                                 List.map
                                     (\dayOfMonth ->
-                                        let
-                                            day =
-                                                Calendar.fromGregorian
-                                                    monthlySpread.year
-                                                    monthlySpread.month
-                                                    dayOfMonth
-
-                                            dayOfWeek =
-                                                Calendar.dayOfWeek day
-
-                                            value =
-                                                model.days
-                                                    |> Dict.get ( monthlySpread.month, dayOfMonth )
-                                                    |> Maybe.map .text
-                                                    |> Maybe.withDefault ""
-                                        in
-                                            Html.li
-                                                [ Html.class "monthly-spread__item"
-                                                ]
-                                                [ Html.span
-                                                    [ Html.class "monthly-spread__item__day-of-month"
-                                                    ]
-                                                    [ text (toString dayOfMonth)
-                                                    ]
-                                                , Html.span
-                                                    [ Html.class "monthly-spread__item__day-of-week"
-                                                    ]
-                                                    [ text
-                                                        (case dayOfWeek of
-                                                            Calendar.Monday ->
-                                                                "M"
-
-                                                            Calendar.Tuesday ->
-                                                                "T"
-
-                                                            Calendar.Wednesday ->
-                                                                "W"
-
-                                                            Calendar.Thursday ->
-                                                                "T"
-
-                                                            Calendar.Friday ->
-                                                                "F"
-
-                                                            Calendar.Saturday ->
-                                                                "S"
-
-                                                            Calendar.Sunday ->
-                                                                "S"
-                                                        )
-                                                    ]
-                                                , Html.input
-                                                    [ Html.class "monthly-spread__item__text"
-                                                    , Html.value value
-                                                    , Html.on "input"
-                                                        (Decode.map
-                                                            (lift << DayChanged monthlySpread.month dayOfMonth)
-                                                            Html.targetValue
-                                                        )
-                                                    ]
-                                                    []
-                                                ]
+                                        dayView lift monthlySpread dayOfMonth model
                                     )
                                     (List.range 1
                                         (Calendar.monthLength
@@ -289,7 +228,7 @@ view lift viewConfig model =
                         |> Maybe.withDefault [ text "" ]
                     )
                 , Lists.ol
-                    [ cs "monthly-spread__bullet-wrapper"
+                    [ cs "monthly-spread__bullets-wrapper"
                     ]
                     (List.indexedMap
                         (\index bullet ->
@@ -303,4 +242,69 @@ view lift viewConfig model =
                         bullets
                     )
                 ]
+            ]
+
+
+dayView lift monthlySpread dayOfMonth model =
+    let
+        day =
+            Calendar.fromGregorian
+                monthlySpread.year
+                monthlySpread.month
+                dayOfMonth
+
+        dayOfWeek =
+            Calendar.dayOfWeek day
+
+        value =
+            model.days
+                |> Dict.get ( monthlySpread.month, dayOfMonth )
+                |> Maybe.map .text
+                |> Maybe.withDefault ""
+    in
+        Html.li
+            [ Html.class "monthly-spread__day"
+            ]
+            [ Html.span
+                [ Html.class "monthly-spread__day__day-of-month"
+                ]
+                [ text (toString dayOfMonth)
+                ]
+            , Html.span
+                [ Html.class "monthly-spread__day__day-of-week"
+                ]
+                [ text
+                    (case dayOfWeek of
+                        Calendar.Monday ->
+                            "M"
+
+                        Calendar.Tuesday ->
+                            "T"
+
+                        Calendar.Wednesday ->
+                            "W"
+
+                        Calendar.Thursday ->
+                            "T"
+
+                        Calendar.Friday ->
+                            "F"
+
+                        Calendar.Saturday ->
+                            "S"
+
+                        Calendar.Sunday ->
+                            "S"
+                    )
+                ]
+            , Html.input
+                [ Html.class "monthly-spread__day__text"
+                , Html.value value
+                , Html.on "input"
+                    (Decode.map
+                        (lift << DayChanged monthlySpread.month dayOfMonth)
+                        Html.targetValue
+                    )
+                ]
+                []
             ]
