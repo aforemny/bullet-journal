@@ -7,6 +7,9 @@ import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder)
 import Material
 import Material.Button as Button
+import Material.Icon as Icon
+import Material.List as Lists
+import Material.Options as Options exposing (styled, css, cs, when)
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -43,14 +46,7 @@ type Msg msg
     | DailySpreadResult (Result Parse.Error (Parse.Object DailySpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
-
-
-
--- | BulletChanged Index String
-
-
-type alias Index =
-    Int
+    | BackClicked
 
 
 init :
@@ -108,29 +104,10 @@ update lift viewConfig msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
-
-
---        BulletChanged index input ->
---            let
---                numBullets =
---                    List.length model.bullets
---            in
---                (model.bullets
---                    |> \bullets ->
---                        if numBullets < index + 1 then
---                            bullets ++ List.repeat (index - numBullets + 1) (Bullet.Note { text = "" })
---                        else
---                            bullets
---                )
---                    |> List.indexedMap
---                        (\otherIndex bullet ->
---                            if otherIndex == index then
---                                Bullet.Note { text = input }
---                            else
---                                bullet
---                        )
---                    |> \bullets ->
---                        ( { model | bullets = bullets }, Cmd.none )
+        BackClicked ->
+            ( model
+            , Navigation.newUrl (Url.toString Url.Index)
+            )
 
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
@@ -149,7 +126,17 @@ view lift viewConfig model =
         Html.div
             [ Html.class "daily-spread" ]
             [ viewConfig.toolbar
-                { additionalSections =
+                { title =
+                    dailySpread
+                        |> Maybe.map DailySpread.title
+                        |> Maybe.withDefault ""
+                , menuIcon =
+                    Icon.view
+                        [ Toolbar.menuIcon
+                        , Options.onClick (lift BackClicked)
+                        ]
+                        "arrow_back"
+                , additionalSections =
                     [ Toolbar.section
                         [ Toolbar.alignEnd
                         ]
@@ -164,24 +151,14 @@ view lift viewConfig model =
                         ]
                     ]
                 }
-            , Html.h1
-                [ Html.class "daily-spread__title"
-                ]
-                [ (dailySpread
-                    |> Maybe.map DailySpread.title
-                    |> Maybe.withDefault ""
-                    |> text
-                  )
-                ]
-            , Html.ol
-                [ Html.class "daily-spread__bullet-wrapper"
+            , Lists.ol
+                [ cs "daily-spread__bullet-wrapper"
                 ]
                 (List.indexedMap
                     (\index bullet ->
                         Bullet.view
-                            { node = Html.li
-                            , additionalAttributes =
-                                [ Html.class "daily-spread__bullet"
+                            { additionalOptions =
+                                [ cs "daily-spread__bullet"
                                 ]
                             }
                             (Bullet.fromParseObject bullet)

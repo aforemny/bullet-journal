@@ -6,6 +6,8 @@ import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
+import Material.List as Lists
+import Material.Options as Options exposing (styled, cs, css, when)
 import Parse
 import Parse.Decode
 import Parse.Encode
@@ -215,9 +217,9 @@ get parse spreadClass spread =
                     { query
                         | whereClause =
                             Parse.and
-                            [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
-                            , Parse.equalTo "spread" (Parse.Encode.objectId spread)
-                            ]
+                                [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
+                                , Parse.equalTo "spread" (Parse.Encode.objectId spread)
+                                ]
                     }
             )
         )
@@ -232,32 +234,51 @@ create parse bullet =
 
 
 type alias Config msg =
-    { node : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-    , additionalAttributes : List (Html.Attribute msg)
+    { additionalOptions : List (Lists.Property msg)
     }
 
 
 view : Config msg -> Bullet -> Html msg
 view config bullet =
-    config.node
-        (Html.class "bullet"
+    Lists.li
+        (cs "bullet"
             :: (case bullet.state of
                     Event ->
-                        Html.class "bullet--event"
+                        cs "bullet--event"
 
                     Note ->
-                        Html.class "bullet--note"
+                        cs "bullet--note"
 
                     Task Unchecked ->
-                        Html.class "bullet--task bullet--task--unchecked"
+                        cs "bullet--task bullet--task--unchecked"
 
                     Task Checked ->
-                        Html.class "bullet--task bullet--task--checked"
+                        cs "bullet--task bullet--task--checked"
 
                     Task Migrated ->
-                        Html.class "bullet--task bullet--task--migrated"
+                        cs "bullet--task bullet--task--migrated"
                )
-            :: config.additionalAttributes
+            :: config.additionalOptions
         )
-        [ text bullet.text
+        [ Lists.graphicIcon
+            []
+            (case bullet.state of
+                    Event ->
+                        "radio_button_unchecked"
+
+                    Note ->
+                        "indeterminate_check_box"
+
+                    Task Unchecked ->
+                        "check_box_outline_blank"
+
+                    Task Checked ->
+                        "check_box"
+
+                    Task Migrated ->
+                        "check_box"
+              )
+        , Lists.text []
+            [ text bullet.text
+            ]
         ]

@@ -6,6 +6,9 @@ import Html.Events as Html
 import Html exposing (Html, text)
 import Material
 import Material.Button as Button
+import Material.Icon as Icon
+import Material.List as Lists
+import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -39,11 +42,7 @@ type Msg msg
     | CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
-
-
-
---    | TitleChanged String
---    | BulletChanged Index String
+    | BackClicked
 
 
 init :
@@ -101,32 +100,10 @@ update lift viewConfig msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
-
-
---        TitleChanged title ->
---            ( { model | title = title }, Cmd.none )
---
---        BulletChanged index input ->
---            let
---                numBullets =
---                    List.length model.bullets
---            in
---                (model.bullets
---                    |> \bullets ->
---                        if numBullets < index + 1 then
---                            bullets ++ List.repeat (index - numBullets + 1) (Bullet.Note { text = "" })
---                        else
---                            bullets
---                )
---                    |> List.indexedMap
---                        (\otherIndex bullet ->
---                            if otherIndex == index then
---                                Bullet.Note { text = input }
---                            else
---                                bullet
---                        )
---                    |> \bullets ->
---                        ( { model | bullets = bullets }, Cmd.none )
+        BackClicked ->
+            ( model
+            , Navigation.newUrl (Url.toString Url.Index)
+            )
 
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
@@ -144,7 +121,17 @@ view lift viewConfig model =
             [ Html.class "collection-spread"
             ]
             [ viewConfig.toolbar
-                { additionalSections =
+                { title =
+                    collectionSpread
+                        |> Maybe.map CollectionSpread.title
+                        |> Maybe.withDefault ""
+                , menuIcon =
+                    Icon.view
+                        [ Toolbar.menuIcon
+                        , Options.onClick (lift BackClicked)
+                        ]
+                        "arrow_back"
+                , additionalSections =
                     [ Toolbar.section
                         [ Toolbar.alignEnd
                         ]
@@ -159,23 +146,14 @@ view lift viewConfig model =
                         ]
                     ]
                 }
-            , Html.div
-                [ Html.class "collection-spread__title"
+            , Lists.ol
+                [ cs "collection-spread__bullet-wrapper"
                 ]
-                [ text
-                    (collectionSpread
-                        |> Maybe.map CollectionSpread.title
-                        |> Maybe.withDefault ""
-                    )
-                ]
-            , Html.ol
-                []
                 (List.indexedMap
                     (\index bullet ->
                         Bullet.view
-                            { node = Html.li
-                            , additionalAttributes =
-                                [ Html.class "collection-spread__bullet"
+                            { additionalOptions =
+                                [ cs "collection-spread__bullet"
                                 ]
                             }
                             (Bullet.fromParseObject bullet)

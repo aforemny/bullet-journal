@@ -6,9 +6,11 @@ import Html exposing (Html, text)
 import Material
 import Material.Button as Button
 import Material.Checkbox as Checkbox
+import Material.Icon as Icon
 import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Select as Select
 import Material.Textfield as TextField
+import Material.Toolbar as Toolbar
 import Navigation
 import Parse
 import Private.ObjectId as ObjectId
@@ -59,6 +61,7 @@ type Msg msg
     | SaveClicked
     | SaveResult (Result Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Date })
     | CancelClicked
+    | BackClicked
 
 
 init :
@@ -143,6 +146,9 @@ update lift viewConfig msg model =
         CancelClicked ->
             ( model, Navigation.newUrl (Url.toString model.referringUrl) )
 
+        BackClicked ->
+            ( model, Navigation.newUrl (Url.toString model.referringUrl) )
+
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
 view lift viewConfig model =
@@ -150,13 +156,16 @@ view lift viewConfig model =
         [ Html.class "new-bullet"
         ]
         [ viewConfig.toolbar
-            { additionalSections = []
+            { title =
+                "New bullet"
+            , menuIcon =
+                Icon.view
+                    [ Toolbar.menuIcon
+                    , Options.onClick (lift BackClicked)
+                    ]
+                    "arrow_back"
+            , additionalSections = []
             }
-        , Html.div
-            [ Html.class "new-bullet__title"
-            ]
-            [ text "New bullet"
-            ]
         , Html.div
             [ Html.class "new-bullet__wrapper"
             ]

@@ -7,6 +7,9 @@ import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder)
 import Material
 import Material.Button as Button
+import Material.Icon as Icon
+import Material.List as Lists
+import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -49,6 +52,7 @@ type Msg msg
     | NewBulletClicked
     | DayChanged Day.Month Day.DayOfMonth String
     | DayResult Day.Month Day.DayOfMonth (Result Parse.Error (Result Day.Update Day.Create))
+    | BackClicked
 
 
 type alias Index =
@@ -155,6 +159,11 @@ update lift viewConfig msg model =
         DayResult month dayOfMonth (Ok (Err { updatedAt })) ->
             ( model, Cmd.none )
 
+        BackClicked ->
+            ( model
+            , Navigation.newUrl (Url.toString Url.Index)
+            )
+
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
 view lift viewConfig model =
@@ -171,7 +180,17 @@ view lift viewConfig model =
         Html.div
             [ Html.class "monthly-spread" ]
             [ viewConfig.toolbar
-                { additionalSections =
+                { title =
+                    monthlySpread
+                        |> Maybe.map MonthlySpread.title
+                        |> Maybe.withDefault ""
+                , menuIcon =
+                    Icon.view
+                        [ Toolbar.menuIcon
+                        , Options.onClick (lift BackClicked)
+                        ]
+                        "arrow_back"
+                , additionalSections =
                     [ Toolbar.section
                         [ Toolbar.alignEnd
                         ]
@@ -186,14 +205,6 @@ view lift viewConfig model =
                         ]
                     ]
                 }
-            , Html.h1
-                [ Html.class "monthly-spread__title"
-                ]
-                [ monthlySpread
-                    |> Maybe.map MonthlySpread.title
-                    |> Maybe.withDefault ""
-                    |> text
-                ]
             , Html.div
                 [ Html.class "monthly-spread__wrapper"
                 ]
@@ -277,15 +288,14 @@ view lift viewConfig model =
                             )
                         |> Maybe.withDefault [ text "" ]
                     )
-                , Html.ol
-                    [ Html.class "monthly-spread__bullet-wrapper"
+                , Lists.ol
+                    [ cs "monthly-spread__bullet-wrapper"
                     ]
                     (List.indexedMap
                         (\index bullet ->
                             Bullet.view
-                                { node = Html.li
-                                , additionalAttributes =
-                                    [ Html.class "monthly-spread__bullet"
+                                { additionalOptions =
+                                    [ cs "monthly-spread__bullet"
                                     ]
                                 }
                                 (Bullet.fromParseObject bullet)

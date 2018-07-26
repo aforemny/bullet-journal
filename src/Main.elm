@@ -277,23 +277,14 @@ makeViewConfig model =
                 Toolbar.view Mdc
                     "toolbar"
                     model.mdc
-                    []
+                    [ Toolbar.fixed
+                    ]
                     [ Toolbar.row []
                         (Toolbar.section
                             [ Toolbar.alignStart
                             ]
-                            [ if model.url == Url.Index then
-                                Icon.view
-                                    [ Toolbar.menuIcon
-                                    ]
-                                    "menu"
-                              else
-                                Icon.view
-                                    [ Toolbar.menuIcon
-                                    , Options.onClick BackClicked
-                                    ]
-                                    "arrow_back"
-                            , Toolbar.title [] [ text "bujo" ]
+                            [ config.menuIcon
+                            , Toolbar.title [] [ text config.title ]
                             ]
                             :: config.additionalSections
                         )
@@ -358,10 +349,7 @@ viewNotFound viewConfig urlString model =
     Html.div
         [ Html.class "not-found"
         ]
-        [ viewConfig.toolbar
-            { additionalSections = []
-            }
-        , text ("URL not found: " ++ urlString)
+        [ text ("URL not found: " ++ urlString)
         ]
 
 

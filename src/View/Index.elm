@@ -7,8 +7,10 @@ import Material
 import Material.Button as Button
 import Material.Dialog as Dialog
 import Material.Fab as Fab
+import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Toolbar as Toolbar
 import Navigation
 import Parse
 import Task exposing (Task)
@@ -260,7 +262,13 @@ view lift viewConfig model =
             [ Html.class "index"
             ]
             [ viewConfig.toolbar
-                { additionalSections = []
+                { title = "Index"
+                , menuIcon =
+                    Icon.view
+                        [ Toolbar.menuIcon
+                        ]
+                        "menu"
+                , additionalSections = []
                 }
             , Html.div
                 [ Html.class "index__title"
