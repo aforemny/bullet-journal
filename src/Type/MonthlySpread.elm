@@ -87,6 +87,14 @@ title monthlySpread =
         ]
 
 
+get :
+    Parse.Config
+    -> Parse.ObjectId MonthlySpread
+    -> Task Parse.Error (Parse.Object MonthlySpread)
+get parse objectId =
+    Parse.toTask parse (Parse.get "MonthlySpread" decode objectId)
+
+
 create : Parse.Config -> MonthlySpread -> Task Parse.Error (Parse.ObjectId MonthlySpread)
 create parse monthlySpread =
     let
