@@ -16,36 +16,40 @@ import Task exposing (Task)
 
 
 type alias Bullet =
-    { spread : Parse.Pointer Any
+    { spreadClass : String
+    , spread : Parse.ObjectId Any
     , state : State
     , text : String
     }
 
 
-empty : Parse.Pointer Any -> Bullet
+empty : String -> Parse.ObjectId Any -> Bullet
 empty =
     emptyNote
 
 
-emptyNote : Parse.Pointer Any -> Bullet
-emptyNote spread =
-    { spread = spread
+emptyNote : String -> Parse.ObjectId Any -> Bullet
+emptyNote spreadClass spread =
+    { spreadClass = spreadClass
+    , spread = spread
     , state = Note
     , text = ""
     }
 
 
-emptyTask : Parse.Pointer Any -> Bullet
-emptyTask spread =
-    { spread = spread
+emptyTask : String -> Parse.ObjectId Any -> Bullet
+emptyTask spreadClass spread =
+    { spreadClass = spreadClass
+    , spread = spread
     , state = Task Unchecked
     , text = ""
     }
 
 
-emptyEvent : Parse.Pointer Any -> Bullet
-emptyEvent spread =
-    { spread = spread
+emptyEvent : String -> Parse.ObjectId Any -> Bullet
+emptyEvent spreadClass spread =
+    { spreadClass = spreadClass
+    , spread = spread
     , state = Event
     , text = ""
     }
@@ -53,7 +57,8 @@ emptyEvent spread =
 
 fromParseObject : Parse.Object Bullet -> Bullet
 fromParseObject bullet =
-    { spread = bullet.spread
+    { spreadClass = bullet.spreadClass
+    , spread = bullet.spread
     , state = bullet.state
     , text = bullet.text
     }
@@ -62,27 +67,21 @@ fromParseObject bullet =
 encode : Bullet -> Value
 encode bullet =
     Encode.object
-        [ ( "spread", encodeSpread bullet.spread )
+        [ ( "spreadClass", Encode.string bullet.spreadClass )
+        , ( "spread", Parse.Encode.objectId bullet.spread )
         , ( "state", encodeState bullet.state )
         , ( "text", Encode.string bullet.text )
-        ]
-
-
-encodeSpread : Parse.Pointer spread -> Value
-encodeSpread spread =
-    Encode.object
-        [ ( "className", Encode.string (Pointer.className spread) )
-        , ( "objectId", Encode.string (ObjectId.toString (Pointer.objectId spread)) )
         ]
 
 
 decode : Decoder (Parse.Object Bullet)
 decode =
     Decode.succeed
-        (\objectId createdAt updatedAt spread state text ->
+        (\objectId createdAt updatedAt spreadClass spread state text ->
             { objectId = objectId
             , createdAt = createdAt
             , updatedAt = updatedAt
+            , spreadClass = spreadClass
             , spread = spread
             , state = state
             , text = text
@@ -91,16 +90,10 @@ decode =
         |> Decode.required "objectId" Parse.Decode.objectId
         |> Decode.required "createdAt" Parse.Decode.date
         |> Decode.required "updatedAt" Parse.Decode.date
-        |> Decode.required "spread" decodeSpread
+        |> Decode.required "spreadClass" Decode.string
+        |> Decode.required "spread" Parse.Decode.objectId
         |> Decode.required "state" decodeState
         |> Decode.required "text" Decode.string
-
-
-decodeSpread : Decoder (Parse.Pointer Any)
-decodeSpread =
-    Decode.map2 Parse.pointer
-        (Decode.at [ "className" ] Decode.string)
-        (Decode.map ObjectId.fromString (Decode.at [ "objectId" ] Decode.string))
 
 
 type Any
@@ -211,14 +204,21 @@ decodeTaskState =
 
 get :
     Parse.Config
-    -> Parse.Pointer spread
+    -> String
+    -> Parse.ObjectId spread
     -> Task Parse.Error (List (Parse.Object Bullet))
-get parse spread =
+get parse spreadClass spread =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "Bullet"
                 |> \query ->
-                    { query | whereClause = Parse.equalTo "spread" (encodeSpread spread) }
+                    { query
+                        | whereClause =
+                            Parse.and
+                            [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
+                            , Parse.equalTo "spread" (Parse.Encode.objectId spread)
+                            ]
+                    }
             )
         )
 

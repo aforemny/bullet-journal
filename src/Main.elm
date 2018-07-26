@@ -190,7 +190,8 @@ initView viewConfig url ( model, cmd ) =
                     _ ->
                         Url.DailySpread (Bullet.castObjectId objectId)
                 )
-                (Parse.pointer className objectId)
+                className
+                objectId
                 model.newBullet
                 |> Tuple.mapFirst
                     (\newBullet ->

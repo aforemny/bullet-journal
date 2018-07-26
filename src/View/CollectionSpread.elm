@@ -59,7 +59,7 @@ init lift viewConfig objectId model =
         , Task.attempt (lift << CollectionSpreadResult)
             (CollectionSpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
-            (Bullet.get viewConfig.parse (Parse.pointer "CollectionSpread" objectId))
+            (Bullet.get viewConfig.parse "CollectionSpread" objectId)
         ]
     )
 

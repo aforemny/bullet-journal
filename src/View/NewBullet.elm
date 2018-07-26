@@ -22,7 +22,8 @@ import View
 type alias Model msg =
     { mdc : Material.Model msg
     , referringUrl : Url
-    , spread : Parse.Pointer Bullet.Any
+    , spreadClass : String
+    , spread : Parse.ObjectId Bullet.Any
     , tipe : Tipe
     , taskState : Bullet.TaskState
     , text : String
@@ -36,10 +37,11 @@ type Tipe
     | Note
 
 
-defaultModel : Url -> Parse.Pointer Bullet.Any -> Model msg
-defaultModel referringUrl spread =
+defaultModel : Url -> String -> Parse.ObjectId Bullet.Any -> Model msg
+defaultModel referringUrl spreadClass spread =
     { mdc = Material.defaultModel
     , referringUrl = referringUrl
+    , spreadClass = spreadClass
     , spread = spread
     , tipe = Note
     , taskState = Bullet.Unchecked
@@ -50,7 +52,7 @@ defaultModel referringUrl spread =
 
 type Msg msg
     = Mdc (Material.Msg msg)
-    | SpreadChanged (Parse.Pointer Bullet.Any)
+    | SpreadChanged (Parse.ObjectId Bullet.Any)
     | TipeChanged Tipe
     | TaskStateChanged Bullet.TaskState
     | TextChanged String
@@ -63,11 +65,12 @@ init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Url
-    -> Parse.Pointer Bullet.Any
+    -> String
+    -> Parse.ObjectId Bullet.Any
     -> Maybe (Model msg)
     -> ( Model msg, Cmd msg )
-init lift viewConfig referringUrl spread model =
-    ( defaultModel referringUrl spread, Material.init (lift << Mdc) )
+init lift viewConfig referringUrl spreadClass spread model =
+    ( defaultModel referringUrl spreadClass spread, Material.init (lift << Mdc) )
 
 
 subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
@@ -118,7 +121,8 @@ update lift viewConfig msg model =
 
                 bullet =
                     Just
-                        { spread = model.spread
+                        { spreadClass = model.spreadClass
+                        , spread = model.spread
                         , state = state
                         , text = model.text
                         }
@@ -161,7 +165,7 @@ view lift viewConfig model =
                     "new-bullet__spread"
                     model.mdc
                     [ TextField.label "Spread"
-                    , TextField.value (ObjectId.toString (Pointer.objectId model.spread))
+                    , TextField.value (ObjectId.toString model.spread)
                     , TextField.disabled
                     ]
                     []
