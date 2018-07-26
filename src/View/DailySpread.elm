@@ -76,8 +76,13 @@ subscriptions lift model =
     Material.subscriptions (lift << Mdc) model
 
 
-update : (Msg msg -> msg) -> Msg msg -> Model msg -> ( Model msg, Cmd msg )
-update lift msg model =
+update :
+    (Msg msg -> msg)
+    -> View.Config msg
+    -> Msg msg
+    -> Model msg
+    -> ( Model msg, Cmd msg )
+update lift viewConfig msg model =
     case msg of
         Mdc msg_ ->
             Material.update (lift << Mdc) msg_ model

@@ -27,7 +27,6 @@ import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import Url exposing (Url)
 import View
-import View.Bullet
 import View.CollectionSpread
 import View.DailySpread
 import View.Index
@@ -42,7 +41,6 @@ type alias Model =
     , dailySpread : View.DailySpread.Model Msg
     , index : View.Index.Model Msg
     , monthlySpread : View.MonthlySpread.Model Msg
-    , bullet : View.Bullet.Model Msg
     , newBullet : Maybe (View.NewBullet.Model Msg)
     , today : Calendar.Day
     , now : Date
@@ -57,7 +55,6 @@ defaultModel =
     , dailySpread = View.DailySpread.defaultModel
     , index = View.Index.defaultModel
     , monthlySpread = View.MonthlySpread.defaultModel
-    , bullet = View.Bullet.defaultModel
     , newBullet = Nothing
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
@@ -71,7 +68,6 @@ type Msg
     | TodayChanged Calendar.Day
     | NowChanged Date
     | BackClicked
-    | BulletMsg (View.Bullet.Msg Msg)
     | NewBulletMsg (View.NewBullet.Msg Msg)
     | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
     | DailySpreadMsg (View.DailySpread.Msg Msg)
@@ -125,7 +121,6 @@ subscriptions model =
         [ Material.subscriptions Mdc model
         , Ports.today TodayChanged
         , Ports.now NowChanged
-        , View.Bullet.subscriptions BulletMsg model.bullet
         , View.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
         , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
         , View.Index.subscriptions IndexMsg model.index
@@ -226,19 +221,19 @@ update msg model =
 
             MonthlySpreadMsg msg_ ->
                 model.monthlySpread
-                    |> View.MonthlySpread.update MonthlySpreadMsg msg_
+                    |> View.MonthlySpread.update MonthlySpreadMsg viewConfig msg_
                     |> Tuple.mapFirst
                         (\monthlySpread -> { model | monthlySpread = monthlySpread })
 
             DailySpreadMsg msg_ ->
                 model.dailySpread
-                    |> View.DailySpread.update DailySpreadMsg msg_
+                    |> View.DailySpread.update DailySpreadMsg viewConfig msg_
                     |> Tuple.mapFirst
                         (\dailySpread -> { model | dailySpread = dailySpread })
 
             CollectionSpreadMsg msg_ ->
                 model.collectionSpread
-                    |> View.CollectionSpread.update CollectionSpreadMsg msg_
+                    |> View.CollectionSpread.update CollectionSpreadMsg viewConfig msg_
                     |> Tuple.mapFirst
                         (\collectionSpread -> { model | collectionSpread = collectionSpread })
 
@@ -247,12 +242,6 @@ update msg model =
                     |> View.Index.update IndexMsg viewConfig msg_
                     |> Tuple.mapFirst
                         (\index -> { model | index = index })
-
-            BulletMsg msg_ ->
-                model.bullet
-                    |> View.Bullet.update BulletMsg msg_
-                    |> Tuple.mapFirst
-                        (\bullet -> { model | bullet = bullet })
 
             NewBulletMsg msg_ ->
                 model.newBullet

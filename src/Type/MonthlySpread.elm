@@ -9,6 +9,7 @@ import Parse.Decode
 import Task exposing (Task)
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
+import Type.Day as Day exposing (Day)
 
 
 type alias MonthlySpread =
