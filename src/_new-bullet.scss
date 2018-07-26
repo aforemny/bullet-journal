@@ -1,0 +1,42 @@
+.new-bullet {
+  &__spread-wrapper,
+  &__tipe-wrapper,
+  &__task-state-wrapper,
+  &__text-wrapper {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  &__buttons-wrapper {
+    margin-top: 20px;
+
+    .mdc-button {
+      margin-right: 24px;
+    }
+
+    .mdc-button:last-child {
+      margin-right: 0;
+    }
+  }
+
+  &__task-state-wrapper {
+    display: none;
+  }
+
+  &--tipe-task &__task-state-wrapper {
+    display: block;
+  }
+
+  &__text-wrapper {
+    .mdc-text-field {
+      width: 640px;
+      max-width: 100%;
+      margin-top: 0 !important;
+      margin-bottom: 0;
+    }
+  }
+
+  &__wrapper + &__wrapper {
+    margin-top: 96px;
+  }
+}

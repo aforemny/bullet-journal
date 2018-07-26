@@ -6,6 +6,7 @@ import Html exposing (Html, text)
 import Material
 import Material.Button as Button
 import Material.Checkbox as Checkbox
+import Material.Dialog as Dialog
 import Material.Icon as Icon
 import Material.Options as Options exposing (styled, cs, css, when)
 import Material.Select as Select
@@ -30,6 +31,7 @@ type alias Model msg =
     , taskState : Bullet.TaskState
     , text : String
     , error : Maybe Parse.Error
+    , showConfirmDeleteDialog : Bool
     }
 
 
@@ -49,6 +51,7 @@ defaultModel referringUrl spreadClass spread =
     , taskState = Bullet.Unchecked
     , text = ""
     , error = Nothing
+    , showConfirmDeleteDialog = True
     }
 
 
@@ -62,6 +65,10 @@ type Msg msg
     | SaveResult (Result Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Date })
     | CancelClicked
     | BackClicked
+    | DeleteClicked
+    | ConfirmDeleteDialogClosed
+    | CancelDeleteClicked
+    | ConfirmDeleteClicked
 
 
 init :
@@ -149,11 +156,32 @@ update lift viewConfig msg model =
         BackClicked ->
             ( model, Navigation.newUrl (Url.toString model.referringUrl) )
 
+        DeleteClicked ->
+            ( { model | showConfirmDeleteDialog = True }, Cmd.none )
+
+        ConfirmDeleteDialogClosed ->
+            ( { model | showConfirmDeleteDialog = False }, Cmd.none )
+
+        CancelDeleteClicked ->
+            ( { model | showConfirmDeleteDialog = False }, Cmd.none )
+
+        ConfirmDeleteClicked ->
+            ( { model | showConfirmDeleteDialog = False }, Cmd.none )
+
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
 view lift viewConfig model =
     Html.div
         [ Html.class "new-bullet"
+        , case model.tipe of
+            Task ->
+                Html.class "new-bullet--tipe-task"
+
+            Event ->
+                Html.class "new-bullet--tipe-event"
+
+            Note ->
+                Html.class "new-bullet--tipe-note"
         ]
         [ viewConfig.toolbar
             { title =
@@ -169,7 +197,9 @@ view lift viewConfig model =
         , Html.div
             [ Html.class "new-bullet__wrapper"
             ]
-            [ Html.div []
+            [ Html.div
+                [ Html.class "new-bullet__spread-wrapper"
+                ]
                 [ TextField.view (lift << Mdc)
                     "new-bullet__spread"
                     model.mdc
@@ -179,11 +209,13 @@ view lift viewConfig model =
                     ]
                     []
                 ]
-            , Html.div []
+            , Html.div
+                [ Html.class "new-bullet__tipe-wrapper"
+                ]
                 [ Select.view (lift << Mdc)
                     "new-bullet__tipe"
                     model.mdc
-                    [ Select.label "Spread"
+                    [ Select.label "Type"
                     , Select.preselected
                     , Options.onChange
                         (\value ->
@@ -219,30 +251,11 @@ view lift viewConfig model =
                         [ text "Note"
                         ]
                     ]
-                , Checkbox.view (lift << Mdc)
-                    "new-bullet__task-state"
-                    model.mdc
-                    [ if model.taskState /= Bullet.Migrated then
-                        Checkbox.checked (model.taskState == Bullet.Checked)
-                      else
-                        Options.nop
-                    , Options.onClick
-                        (lift <|
-                            TaskStateChanged <|
-                                case model.taskState of
-                                    Bullet.Checked ->
-                                        Bullet.Unchecked
-
-                                    Bullet.Unchecked ->
-                                        Bullet.Checked
-
-                                    Bullet.Migrated ->
-                                        Bullet.Migrated
-                        )
-                    , when (model.tipe /= Task) Checkbox.disabled
-                    ]
-                    []
-                , TextField.view (lift << Mdc)
+                ]
+            , Html.div
+                [ Html.class "new-bullet__text-wrapper"
+                ]
+                [ TextField.view (lift << Mdc)
                     "new-bullet__text"
                     model.mdc
                     [ TextField.label "Text"
@@ -251,7 +264,52 @@ view lift viewConfig model =
                     ]
                     []
                 ]
-            , Html.div []
+            , Html.div
+                [ Html.class "new-bullet__task-state-wrapper"
+                ]
+                [ Select.view (lift << Mdc)
+                    "new-bullet__task-state"
+                    model.mdc
+                    [ Select.label "Type"
+                    , Select.preselected
+                    , Options.onChange
+                        (\value ->
+                            lift <|
+                                TaskStateChanged <|
+                                    case value of
+                                        "checked" ->
+                                            Bullet.Checked
+
+                                        "unchecked" ->
+                                            Bullet.Unchecked
+
+                                        _ ->
+                                            Bullet.Migrated
+                        )
+                    ]
+                    [ Select.option
+                        [ Select.value "unchecked"
+                        , when (model.taskState == Bullet.Unchecked) Select.selected
+                        ]
+                        [ text "Unchecked"
+                        ]
+                    , Select.option
+                        [ Select.value "checked"
+                        , when (model.taskState == Bullet.Checked) Select.selected
+                        ]
+                        [ text "Checked"
+                        ]
+                    , Select.option
+                        [ Select.value "migrated"
+                        , when (model.taskState == Bullet.Migrated) Select.selected
+                        ]
+                        [ text "Migrated"
+                        ]
+                    ]
+                ]
+            , Html.div
+                [ Html.class "new-bullet__buttons-wrapper"
+                ]
                 [ Button.view (lift << Mdc)
                     "new-bullet__save-button"
                     model.mdc
@@ -267,6 +325,69 @@ view lift viewConfig model =
                     , Button.onClick (lift CancelClicked)
                     ]
                     [ text "Cancel" ]
+                ]
+            ]
+        , Html.div
+            [ Html.class "new-bullet__wrapper"
+            ]
+            [ Html.h2
+                [ Html.class "new-bullet__headline" ]
+                [ text "Delete"
+                ]
+            , Html.div
+                [ Html.class "new-bullet__delete-wrapper"
+                ]
+                [ Button.view (lift << Mdc)
+                    "new-bullet__delete"
+                    model.mdc
+                    [ Button.raised
+                    , Button.ripple
+                    , Button.onClick (lift DeleteClicked)
+                    ]
+                    [ text "Delete"
+                    ]
+                ]
+            , Dialog.view (lift << Mdc)
+                "new-bullet__confirm-delete"
+                model.mdc
+                [ when model.showConfirmDeleteDialog Dialog.open
+                , Dialog.onClose (lift ConfirmDeleteDialogClosed)
+                ]
+                [ Dialog.surface []
+                    [ Dialog.header []
+                        [ styled Html.h3
+                            [ Dialog.title
+                            ]
+                            [ text "Confirm to delete"
+                            ]
+                        ]
+                    , Dialog.body []
+                        [ text """
+Do you really want to delete that task?
+                          """
+                        ]
+                    , Dialog.footer []
+                        [ Button.view (lift << Mdc)
+                            "new-bullet__confirm-delete__cancel"
+                            model.mdc
+                            [ Button.ripple
+                            , Dialog.cancel
+                            , Button.onClick (lift CancelDeleteClicked)
+                            ]
+                            [ text "No"
+                            ]
+                        , Button.view (lift << Mdc)
+                            "new-bullet__confirm-delete__accept"
+                            model.mdc
+                            [ Button.ripple
+                            , Dialog.accept
+                            , Button.onClick (lift ConfirmDeleteClicked)
+                            ]
+                            [ text "Yes"
+                            ]
+                        ]
+                    ]
+                , Dialog.backdrop [] []
                 ]
             ]
         ]
