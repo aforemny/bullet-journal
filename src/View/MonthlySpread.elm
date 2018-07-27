@@ -10,6 +10,7 @@ import Material.Button as Button
 import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Textfield as TextField
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -297,14 +298,16 @@ dayView lift monthlySpread dayOfMonth model =
                             "S"
                     )
                 ]
-            , Html.input
-                [ Html.class "monthly-spread__day__text"
-                , Html.value value
-                , Html.on "input"
-                    (Decode.map
-                        (lift << DayChanged monthlySpread.month dayOfMonth)
-                        Html.targetValue
-                    )
+            , TextField.view (lift << Mdc)
+                ("monthly-spread__day__text-"
+                    ++ toString monthlySpread.month
+                    ++ "-"
+                    ++ toString dayOfMonth
+                )
+                model.mdc
+                [ TextField.value value
+                , Options.onInput (lift << DayChanged monthlySpread.month dayOfMonth)
+                , TextField.fullwidth
                 ]
                 []
             ]
