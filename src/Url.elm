@@ -4,7 +4,7 @@ import Navigation
 import Parse
 import Private.ObjectId as ObjectId
 import String
-import Type.Bullet as Bullet
+import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
@@ -16,7 +16,7 @@ type Url
     | CollectionSpread (Parse.ObjectId CollectionSpread)
     | DailySpread (Parse.ObjectId DailySpread)
     | MonthlySpread (Parse.ObjectId MonthlySpread)
-    | NewBullet String String (Parse.ObjectId Bullet.Any)
+    | EditBullet String String (Parse.ObjectId Bullet.Any) (Maybe (Parse.ObjectId Bullet))
     | NotFound String
 
 
@@ -36,8 +36,15 @@ toString url =
             CollectionSpread objectId ->
                 "collection-spread/" ++ ObjectId.toString objectId
 
-            NewBullet route className objectId ->
-                route ++ "/" ++ ObjectId.toString objectId ++ "/bullet/new"
+            EditBullet route className spreadId Nothing ->
+                route ++ "/" ++ ObjectId.toString spreadId ++ "/bullet/new"
+
+            EditBullet route className spreadId (Just bulletId) ->
+                route
+                    ++ "/"
+                    ++ ObjectId.toString spreadId
+                    ++ "/bullet/"
+                    ++ ObjectId.toString bulletId
 
             NotFound hash ->
                 hash
@@ -63,12 +70,36 @@ parseUrl =
     in
         oneOf
             [ map Index (s "")
-            , map (NewBullet "collection-spread" "CollectionSpread")
+            , map
+                (\spreadId ->
+                    EditBullet "collection-spread" "CollectionSpread" spreadId Nothing
+                )
                 (s "collection-spread" </> objectId </> s "bullet" </> s "new")
-            , map (NewBullet "monthly-spread" "MonthlySpread")
+            , map
+                (\spreadId ->
+                    EditBullet "monthly-spread" "MonthlySpread" spreadId Nothing
+                )
                 (s "monthly-spread" </> objectId </> s "bullet" </> s "new")
-            , map (NewBullet "daily-spread" "DailySpread")
+            , map
+                (\spreadId ->
+                    EditBullet "daily-spread" "DailySpread" spreadId Nothing
+                )
                 (s "daily-spread" </> objectId </> s "bullet" </> s "new")
+            , map
+                (\spreadId bulletId ->
+                    EditBullet "collection-spread" "CollectionSpread" spreadId (Just bulletId)
+                )
+                (s "collection-spread" </> objectId </> s "bullet" </> objectId)
+            , map
+                (\spreadId bulletId ->
+                    EditBullet "monthly-spread" "MonthlySpread" spreadId (Just bulletId)
+                )
+                (s "monthly-spread" </> objectId </> s "bullet" </> objectId)
+            , map
+                (\spreadId bulletId ->
+                    EditBullet "daily-spread" "DailySpread" spreadId (Just bulletId)
+                )
+                (s "daily-spread" </> objectId </> s "bullet" </> objectId)
             , map CollectionSpread (s "collection-spread" </> objectId)
             , map DailySpread (s "daily-spread" </> objectId)
             , map MonthlySpread (s "monthly-spread" </> objectId)

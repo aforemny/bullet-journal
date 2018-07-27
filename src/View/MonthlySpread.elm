@@ -54,6 +54,7 @@ type Msg msg
     | DayChanged Day.Month Day.DayOfMonth String
     | DayResult Day.Month Day.DayOfMonth (Result Parse.Error (Result Day.Update Day.Create))
     | BackClicked
+    | BulletClicked (Parse.ObjectId Bullet)
 
 
 type alias Index =
@@ -73,7 +74,7 @@ init lift viewConfig objectId model =
         , Task.attempt (lift << MonthlySpreadResult)
             (MonthlySpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
-            (Bullet.get viewConfig.parse "MonthlySpread" objectId)
+            (Bullet.getOf viewConfig.parse "MonthlySpread" objectId)
         ]
     )
 
@@ -112,7 +113,10 @@ update lift viewConfig msg model =
             ( model
             , model.monthlySpread
                 |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map (Url.NewBullet "monthly-spread" "MonthlySpread")
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet "monthly-spread" "MonthlySpread" spreadId Nothing
+                    )
                 |> Maybe.map (Navigation.newUrl << Url.toString)
                 |> Maybe.withDefault Cmd.none
             )
@@ -163,6 +167,22 @@ update lift viewConfig msg model =
         BackClicked ->
             ( model
             , Navigation.newUrl (Url.toString Url.Index)
+            )
+
+        BulletClicked bulletId ->
+            ( model
+            , model.monthlySpread
+                |> Maybe.map (.objectId >> Bullet.anyObjectId)
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet
+                            "monthly-spread"
+                            "MonthlySpread"
+                            spreadId
+                            (Just bulletId)
+                    )
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
             )
 
 
@@ -231,11 +251,13 @@ view lift viewConfig model =
                 , Lists.ol
                     [ cs "monthly-spread__bullets-wrapper"
                     ]
-                    (List.indexedMap
-                        (\index bullet ->
+                    (List.map
+                        (\bullet ->
                             Bullet.view
                                 { additionalOptions =
                                     [ cs "monthly-spread__bullet"
+                                    , Options.onClick
+                                        (lift (BulletClicked bullet.objectId))
                                     ]
                                 }
                                 (Bullet.fromParseObject bullet)

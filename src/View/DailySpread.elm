@@ -47,6 +47,7 @@ type Msg msg
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
     | BackClicked
+    | BulletClicked (Parse.ObjectId Bullet)
 
 
 init :
@@ -62,7 +63,7 @@ init lift viewConfig objectId model =
         , Task.attempt (lift << DailySpreadResult)
             (DailySpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
-            (Bullet.get viewConfig.parse "DailySpread" objectId)
+            (Bullet.getOf viewConfig.parse "DailySpread" objectId)
         ]
     )
 
@@ -99,7 +100,25 @@ update lift viewConfig msg model =
             ( model
             , model.dailySpread
                 |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map (Url.NewBullet "daily-spread" "DailySpread")
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet "daily-spread" "DailySpread" spreadId Nothing
+                    )
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
+            )
+
+        BulletClicked bulletId ->
+            ( model
+            , model.dailySpread
+                |> Maybe.map (.objectId >> Bullet.anyObjectId)
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet "daily-spread"
+                            "DailySpread"
+                            spreadId
+                            (Just bulletId)
+                    )
                 |> Maybe.map (Navigation.newUrl << Url.toString)
                 |> Maybe.withDefault Cmd.none
             )
@@ -154,11 +173,12 @@ view lift viewConfig model =
             , Lists.ol
                 [ cs "daily-spread__bullet-wrapper"
                 ]
-                (List.indexedMap
-                    (\index bullet ->
+                (List.map
+                    (\bullet ->
                         Bullet.view
                             { additionalOptions =
                                 [ cs "daily-spread__bullet"
+                                , Options.onClick (lift (BulletClicked bullet.objectId))
                                 ]
                             }
                             (Bullet.fromParseObject bullet)

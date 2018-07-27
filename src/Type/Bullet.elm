@@ -19,7 +19,7 @@ import Task exposing (Task)
 
 type alias Bullet =
     { spreadClass : String
-    , spread : Parse.ObjectId Any
+    , spreadId : Parse.ObjectId Any
     , state : State
     , text : String
     }
@@ -31,27 +31,27 @@ empty =
 
 
 emptyNote : String -> Parse.ObjectId Any -> Bullet
-emptyNote spreadClass spread =
+emptyNote spreadClass spreadId =
     { spreadClass = spreadClass
-    , spread = spread
+    , spreadId = spreadId
     , state = Note
     , text = ""
     }
 
 
 emptyTask : String -> Parse.ObjectId Any -> Bullet
-emptyTask spreadClass spread =
+emptyTask spreadClass spreadId =
     { spreadClass = spreadClass
-    , spread = spread
+    , spreadId = spreadId
     , state = Task Unchecked
     , text = ""
     }
 
 
 emptyEvent : String -> Parse.ObjectId Any -> Bullet
-emptyEvent spreadClass spread =
+emptyEvent spreadClass spreadId =
     { spreadClass = spreadClass
-    , spread = spread
+    , spreadId = spreadId
     , state = Event
     , text = ""
     }
@@ -60,7 +60,7 @@ emptyEvent spreadClass spread =
 fromParseObject : Parse.Object Bullet -> Bullet
 fromParseObject bullet =
     { spreadClass = bullet.spreadClass
-    , spread = bullet.spread
+    , spreadId = bullet.spreadId
     , state = bullet.state
     , text = bullet.text
     }
@@ -70,7 +70,7 @@ encode : Bullet -> Value
 encode bullet =
     Encode.object
         [ ( "spreadClass", Encode.string bullet.spreadClass )
-        , ( "spread", Parse.Encode.objectId bullet.spread )
+        , ( "spreadId", Parse.Encode.objectId bullet.spreadId )
         , ( "state", encodeState bullet.state )
         , ( "text", Encode.string bullet.text )
         ]
@@ -79,12 +79,12 @@ encode bullet =
 decode : Decoder (Parse.Object Bullet)
 decode =
     Decode.succeed
-        (\objectId createdAt updatedAt spreadClass spread state text ->
+        (\objectId createdAt updatedAt spreadClass spreadId state text ->
             { objectId = objectId
             , createdAt = createdAt
             , updatedAt = updatedAt
             , spreadClass = spreadClass
-            , spread = spread
+            , spreadId = spreadId
             , state = state
             , text = text
             }
@@ -93,7 +93,7 @@ decode =
         |> Decode.required "createdAt" Parse.Decode.date
         |> Decode.required "updatedAt" Parse.Decode.date
         |> Decode.required "spreadClass" Decode.string
-        |> Decode.required "spread" Parse.Decode.objectId
+        |> Decode.required "spreadId" Parse.Decode.objectId
         |> Decode.required "state" decodeState
         |> Decode.required "text" Decode.string
 
@@ -206,10 +206,18 @@ decodeTaskState =
 
 get :
     Parse.Config
+    -> Parse.ObjectId Bullet
+    -> Task Parse.Error (Parse.Object Bullet)
+get parse objectId =
+    Parse.toTask parse (Parse.get "Bullet" decode objectId)
+
+
+getOf :
+    Parse.Config
     -> String
-    -> Parse.ObjectId spread
+    -> Parse.ObjectId spreadId
     -> Task Parse.Error (List (Parse.Object Bullet))
-get parse spreadClass spread =
+getOf parse spreadClass spreadId =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "Bullet"
@@ -218,7 +226,7 @@ get parse spreadClass spread =
                         | whereClause =
                             Parse.and
                                 [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
-                                , Parse.equalTo "spread" (Parse.Encode.objectId spread)
+                                , Parse.equalTo "spreadId" (Parse.Encode.objectId spreadId)
                                 ]
                     }
             )
@@ -231,6 +239,15 @@ create :
     -> Task Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Date }
 create parse bullet =
     Parse.toTask parse (Parse.create "Bullet" encode bullet)
+
+
+update :
+    Parse.Config
+    -> Parse.ObjectId Bullet
+    -> Bullet
+    -> Task Parse.Error { updatedAt : Date }
+update parse bulletId bullet =
+    Parse.toTask parse (Parse.update "Bullet" encode bulletId bullet)
 
 
 type alias Config msg =
@@ -263,21 +280,21 @@ view config bullet =
         [ Lists.graphicIcon
             []
             (case bullet.state of
-                    Event ->
-                        "radio_button_unchecked"
+                Event ->
+                    "radio_button_unchecked"
 
-                    Note ->
-                        "indeterminate_check_box"
+                Note ->
+                    "indeterminate_check_box"
 
-                    Task Unchecked ->
-                        "check_box_outline_blank"
+                Task Unchecked ->
+                    "check_box_outline_blank"
 
-                    Task Checked ->
-                        "check_box"
+                Task Checked ->
+                    "check_box"
 
-                    Task Migrated ->
-                        "check_box"
-              )
+                Task Migrated ->
+                    "check_box"
+            )
         , Lists.text []
             [ text bullet.text
             ]

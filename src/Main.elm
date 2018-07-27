@@ -29,9 +29,9 @@ import Url exposing (Url)
 import View
 import View.CollectionSpread
 import View.DailySpread
+import View.EditBullet
 import View.Index
 import View.MonthlySpread
-import View.NewBullet
 
 
 type alias Model =
@@ -41,7 +41,7 @@ type alias Model =
     , dailySpread : View.DailySpread.Model Msg
     , index : View.Index.Model Msg
     , monthlySpread : View.MonthlySpread.Model Msg
-    , newBullet : Maybe (View.NewBullet.Model Msg)
+    , editBullet : Maybe (View.EditBullet.Model Msg)
     , today : Calendar.Day
     , now : Date
     }
@@ -55,7 +55,7 @@ defaultModel =
     , dailySpread = View.DailySpread.defaultModel
     , index = View.Index.defaultModel
     , monthlySpread = View.MonthlySpread.defaultModel
-    , newBullet = Nothing
+    , editBullet = Nothing
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
     }
@@ -68,7 +68,7 @@ type Msg
     | TodayChanged Calendar.Day
     | NowChanged Date
     | BackClicked
-    | NewBulletMsg (View.NewBullet.Msg Msg)
+    | EditBulletMsg (View.EditBullet.Msg Msg)
     | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
     | DailySpreadMsg (View.DailySpread.Msg Msg)
     | IndexMsg (View.Index.Msg Msg)
@@ -125,8 +125,8 @@ subscriptions model =
         , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
         , View.Index.subscriptions IndexMsg model.index
         , View.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
-        , model.newBullet
-            |> Maybe.map (View.NewBullet.subscriptions NewBulletMsg)
+        , model.editBullet
+            |> Maybe.map (View.EditBullet.subscriptions EditBulletMsg)
             |> Maybe.withDefault Sub.none
         ]
 
@@ -172,25 +172,26 @@ initView viewConfig url ( model, cmd ) =
                         { model | collectionSpread = collectionSpread }
                     )
 
-        Url.NewBullet route className objectId ->
-            View.NewBullet.init NewBulletMsg
+        Url.EditBullet route className spreadId bulletId ->
+            View.EditBullet.init EditBulletMsg
                 viewConfig
                 (case className of
                     "CollectionSpread" ->
-                        Url.CollectionSpread (Bullet.castObjectId objectId)
+                        Url.CollectionSpread (Bullet.castObjectId spreadId)
 
                     "MonthlySpread" ->
-                        Url.MonthlySpread (Bullet.castObjectId objectId)
+                        Url.MonthlySpread (Bullet.castObjectId spreadId)
 
                     _ ->
-                        Url.DailySpread (Bullet.castObjectId objectId)
+                        Url.DailySpread (Bullet.castObjectId spreadId)
                 )
                 className
-                objectId
-                model.newBullet
+                spreadId
+                bulletId
+                model.editBullet
                 |> Tuple.mapFirst
-                    (\newBullet ->
-                        { model | newBullet = Just newBullet }
+                    (\editBullet ->
+                        { model | editBullet = Just editBullet }
                     )
 
         _ ->
@@ -243,12 +244,12 @@ update msg model =
                     |> Tuple.mapFirst
                         (\index -> { model | index = index })
 
-            NewBulletMsg msg_ ->
-                model.newBullet
-                    |> Maybe.map (View.NewBullet.update NewBulletMsg viewConfig msg_)
+            EditBulletMsg msg_ ->
+                model.editBullet
+                    |> Maybe.map (View.EditBullet.update EditBulletMsg viewConfig msg_)
                     |> Maybe.map
                         (Tuple.mapFirst
-                            (\newBullet -> { model | newBullet = Just newBullet })
+                            (\editBullet -> { model | editBullet = Just editBullet })
                         )
                     |> Maybe.withDefault ( model, Cmd.none )
 
@@ -324,8 +325,8 @@ view model =
                     Url.NotFound urlString ->
                         viewNotFound viewConfig urlString model
 
-                    Url.NewBullet route className objectId ->
-                        viewNewBullet viewConfig model
+                    Url.EditBullet route className objectId bulletId ->
+                        viewEditBullet viewConfig model
                 ]
             ]
 
@@ -359,8 +360,8 @@ viewIndex viewConfig model =
     View.Index.view IndexMsg viewConfig model.index
 
 
-viewNewBullet : View.Config Msg -> Model -> Html Msg
-viewNewBullet viewConfig model =
-    model.newBullet
-        |> Maybe.map (View.NewBullet.view NewBulletMsg viewConfig)
+viewEditBullet : View.Config Msg -> Model -> Html Msg
+viewEditBullet viewConfig model =
+    model.editBullet
+        |> Maybe.map (View.EditBullet.view EditBulletMsg viewConfig)
         |> Maybe.withDefault (text "")

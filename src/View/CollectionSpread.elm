@@ -43,6 +43,7 @@ type Msg msg
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
     | BackClicked
+    | BulletClicked (Parse.ObjectId Bullet)
 
 
 init :
@@ -58,7 +59,7 @@ init lift viewConfig objectId model =
         , Task.attempt (lift << CollectionSpreadResult)
             (CollectionSpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
-            (Bullet.get viewConfig.parse "CollectionSpread" objectId)
+            (Bullet.getOf viewConfig.parse "CollectionSpread" objectId)
         ]
     )
 
@@ -95,7 +96,25 @@ update lift viewConfig msg model =
             ( model
             , model.collectionSpread
                 |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map (Url.NewBullet "collection-spread" "CollectionSpread")
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet "collection-spread" "CollectionSpread" spreadId Nothing
+                    )
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
+            )
+
+        BulletClicked bulletId ->
+            ( model
+            , model.collectionSpread
+                |> Maybe.map (.objectId >> Bullet.anyObjectId)
+                |> Maybe.map
+                    (\spreadId ->
+                        Url.EditBullet "collection-spread"
+                            "CollectionSpread"
+                            spreadId
+                            (Just bulletId)
+                    )
                 |> Maybe.map (Navigation.newUrl << Url.toString)
                 |> Maybe.withDefault Cmd.none
             )
@@ -149,11 +168,12 @@ view lift viewConfig model =
             , Lists.ol
                 [ cs "collection-spread__bullet-wrapper"
                 ]
-                (List.indexedMap
-                    (\index bullet ->
+                (List.map
+                    (\bullet ->
                         Bullet.view
                             { additionalOptions =
                                 [ cs "collection-spread__bullet"
+                                , Options.onClick (lift (BulletClicked bullet.objectId))
                                 ]
                             }
                             (Bullet.fromParseObject bullet)
