@@ -250,6 +250,14 @@ update parse bulletId bullet =
     Parse.toTask parse (Parse.update "Bullet" encode bulletId bullet)
 
 
+delete
+  : Parse.Config
+  -> Parse.ObjectId Bullet
+  -> Task Parse.Error {}
+delete parse bulletId =
+  Parse.toTask parse (Parse.delete "Bullet" bulletId)
+
+
 type alias Config msg =
     { additionalOptions : List (Lists.Property msg)
     }

@@ -80,6 +80,7 @@ type Msg msg
     | ConfirmDeleteDialogClosed
     | CancelDeleteClicked
     | ConfirmDeleteClicked
+    | DeleteResult (Result Parse.Error {})
 
 
 init :
@@ -197,7 +198,20 @@ update lift viewConfig msg model =
             ( { model | showConfirmDeleteDialog = False }, Cmd.none )
 
         ConfirmDeleteClicked ->
-            ( { model | showConfirmDeleteDialog = False }, Cmd.none )
+            ( { model | showConfirmDeleteDialog = False }
+            , model.bulletId
+                |> Maybe.map (Bullet.delete viewConfig.parse)
+                |> Maybe.map (Task.attempt (lift << DeleteResult))
+                |> Maybe.withDefault Cmd.none
+            )
+
+        DeleteResult (Err err) ->
+            ( { model | error = Just err }, Cmd.none )
+
+        DeleteResult (Ok _) ->
+            ( model
+            , Navigation.newUrl (Url.toString model.referringUrl)
+            )
 
         BulletResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
