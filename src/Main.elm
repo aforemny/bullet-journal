@@ -31,6 +31,9 @@ import View
 import View.CollectionSpread
 import View.DailySpread
 import View.EditBullet
+import View.EditCollectionSpread
+import View.EditDailySpread
+import View.EditMonthlySpread
 import View.Index
 import View.MonthlySpread
 
@@ -42,6 +45,9 @@ type alias Model =
     , dailySpread : View.DailySpread.Model Msg
     , index : View.Index.Model Msg
     , monthlySpread : View.MonthlySpread.Model Msg
+    , editCollectionSpread : View.EditCollectionSpread.Model Msg
+    , editDailySpread : View.EditDailySpread.Model Msg
+    , editMonthlySpread : View.EditMonthlySpread.Model Msg
     , editBullet : Maybe (View.EditBullet.Model Msg)
     , today : Calendar.Day
     , now : Date
@@ -57,6 +63,9 @@ defaultModel =
     , dailySpread = View.DailySpread.defaultModel
     , index = View.Index.defaultModel
     , monthlySpread = View.MonthlySpread.defaultModel
+    , editMonthlySpread = View.EditMonthlySpread.defaultModel
+    , editCollectionSpread = View.EditCollectionSpread.defaultModel
+    , editDailySpread = View.EditDailySpread.defaultModel
     , editBullet = Nothing
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
@@ -76,6 +85,9 @@ type Msg
     | DailySpreadMsg (View.DailySpread.Msg Msg)
     | IndexMsg (View.Index.Msg Msg)
     | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
+    | EditCollectionSpreadMsg (View.EditCollectionSpread.Msg Msg)
+    | EditDailySpreadMsg (View.EditDailySpread.Msg Msg)
+    | EditMonthlySpreadMsg (View.EditMonthlySpread.Msg Msg)
     | TodayClicked
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | MonthClicked
@@ -132,6 +144,9 @@ subscriptions model =
         , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
         , View.Index.subscriptions IndexMsg model.index
         , View.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
+        , View.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
+        , View.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
+        , View.EditDailySpread.subscriptions EditDailySpreadMsg model.editDailySpread
         , model.editBullet
             |> Maybe.map (View.EditBullet.subscriptions EditBulletMsg)
             |> Maybe.withDefault Sub.none
@@ -177,6 +192,37 @@ initView viewConfig url ( model, cmd ) =
                 |> Tuple.mapFirst
                     (\collectionSpread ->
                         { model | collectionSpread = collectionSpread }
+                    )
+
+        Url.EditMonthlySpread objectId ->
+            View.EditMonthlySpread.init EditMonthlySpreadMsg
+                viewConfig
+                objectId
+                model.editMonthlySpread
+                |> Tuple.mapFirst
+                    (\editMonthlySpread ->
+                        { model | editMonthlySpread = editMonthlySpread }
+                    )
+
+        Url.EditDailySpread objectId ->
+            View.EditDailySpread.init
+                EditDailySpreadMsg
+                viewConfig
+                objectId
+                model.editDailySpread
+                |> Tuple.mapFirst
+                    (\editDailySpread ->
+                        { model | editDailySpread = editDailySpread }
+                    )
+
+        Url.EditCollectionSpread objectId ->
+            View.EditCollectionSpread.init EditCollectionSpreadMsg
+                viewConfig
+                objectId
+                model.editCollectionSpread
+                |> Tuple.mapFirst
+                    (\editCollectionSpread ->
+                        { model | editCollectionSpread = editCollectionSpread }
                     )
 
         Url.EditBullet route className spreadId bulletId ->
@@ -244,6 +290,24 @@ update msg model =
                     |> View.CollectionSpread.update CollectionSpreadMsg viewConfig msg_
                     |> Tuple.mapFirst
                         (\collectionSpread -> { model | collectionSpread = collectionSpread })
+
+            EditMonthlySpreadMsg msg_ ->
+                model.editMonthlySpread
+                    |> View.EditMonthlySpread.update EditMonthlySpreadMsg viewConfig msg_
+                    |> Tuple.mapFirst
+                        (\editMonthlySpread -> { model | editMonthlySpread = editMonthlySpread })
+
+            EditDailySpreadMsg msg_ ->
+                model.editDailySpread
+                    |> View.EditDailySpread.update EditDailySpreadMsg viewConfig msg_
+                    |> Tuple.mapFirst
+                        (\editDailySpread -> { model | editDailySpread = editDailySpread })
+
+            EditCollectionSpreadMsg msg_ ->
+                model.editCollectionSpread
+                    |> View.EditCollectionSpread.update EditCollectionSpreadMsg viewConfig msg_
+                    |> Tuple.mapFirst
+                        (\editCollectionSpread -> { model | editCollectionSpread = editCollectionSpread })
 
             IndexMsg msg_ ->
                 model.index
@@ -410,6 +474,15 @@ view model =
                     Url.CollectionSpread objectId ->
                         viewCollectionSpread viewConfig model
 
+                    Url.EditMonthlySpread objectId ->
+                        viewEditMonthlySpread viewConfig model
+
+                    Url.EditDailySpread objectId ->
+                        viewEditDailySpread viewConfig model
+
+                    Url.EditCollectionSpread objectId ->
+                        viewEditCollectionSpread viewConfig model
+
                     Url.NotFound urlString ->
                         viewNotFound viewConfig urlString model
 
@@ -432,6 +505,23 @@ viewDailySpread viewConfig model =
 viewCollectionSpread : View.Config Msg -> Model -> Html Msg
 viewCollectionSpread viewConfig model =
     View.CollectionSpread.view CollectionSpreadMsg viewConfig model.collectionSpread
+
+
+viewEditMonthlySpread : View.Config Msg -> Model -> Html Msg
+viewEditMonthlySpread viewConfig model =
+    View.EditMonthlySpread.view EditMonthlySpreadMsg viewConfig model.editMonthlySpread
+
+
+viewEditDailySpread : View.Config Msg -> Model -> Html Msg
+viewEditDailySpread viewConfig model =
+    View.EditDailySpread.view EditDailySpreadMsg viewConfig model.editDailySpread
+
+
+viewEditCollectionSpread : View.Config Msg -> Model -> Html Msg
+viewEditCollectionSpread viewConfig model =
+    View.EditCollectionSpread.view EditCollectionSpreadMsg
+        viewConfig
+        model.editCollectionSpread
 
 
 viewNotFound : View.Config Msg -> String -> Model -> Html Msg

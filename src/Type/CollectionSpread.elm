@@ -118,3 +118,19 @@ get :
     -> Task Parse.Error (Parse.Object CollectionSpread)
 get parse objectId =
     Parse.toTask parse (Parse.get "CollectionSpread" decode objectId)
+
+
+update :
+    Parse.Config
+    -> Parse.ObjectId CollectionSpread
+    -> CollectionSpread
+    -> Task Parse.Error { updatedAt : Date }
+update parse collectionSpreadId collectionSpread =
+    Parse.toTask parse
+        (Parse.update "CollectionSpread" encode collectionSpreadId collectionSpread)
+
+
+delete : Parse.Config -> Parse.ObjectId CollectionSpread -> Task Parse.Error {}
+delete parse collectionSpreadId =
+    Parse.toTask parse
+        (Parse.delete "CollectionSpread" collectionSpreadId)

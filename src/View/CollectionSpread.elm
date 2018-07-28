@@ -42,6 +42,7 @@ type Msg msg
     | CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
+    | EditClicked
     | BackClicked
     | BulletClicked (Parse.ObjectId Bullet)
 
@@ -104,6 +105,14 @@ update lift viewConfig msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
+        EditClicked ->
+            ( model
+            , model.collectionSpread
+                |> Maybe.map (Url.EditCollectionSpread << .objectId)
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
+            )
+
         BulletClicked bulletId ->
             ( model
             , model.collectionSpread
@@ -155,6 +164,14 @@ view lift viewConfig model =
                         [ Toolbar.alignEnd
                         ]
                         [ Button.view (lift << Mdc)
+                            "collection-spread__edit-collection-spread"
+                            model.mdc
+                            [ Button.ripple
+                            , Button.onClick (lift EditClicked)
+                            ]
+                            [ text "Edit"
+                            ]
+                        , Button.view (lift << Mdc)
                             "collection-spread__new-bullet"
                             model.mdc
                             [ Button.ripple

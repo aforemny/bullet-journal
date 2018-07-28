@@ -51,6 +51,7 @@ type Msg msg
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | DaysResult (Result Parse.Error (List (Parse.Object Day)))
     | NewBulletClicked
+    | EditClicked
     | DayChanged Day.Month Day.DayOfMonth String
     | DayResult Day.Month Day.DayOfMonth (Result Parse.Error (Result Day.Update Day.Create))
     | BackClicked
@@ -117,6 +118,14 @@ update lift viewConfig msg model =
                     (\spreadId ->
                         Url.EditBullet "monthly-spread" "MonthlySpread" spreadId Nothing
                     )
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
+            )
+
+        EditClicked ->
+            ( model
+            , model.monthlySpread
+                |> Maybe.map (Url.EditMonthlySpread << .objectId)
                 |> Maybe.map (Navigation.newUrl << Url.toString)
                 |> Maybe.withDefault Cmd.none
             )
@@ -216,6 +225,14 @@ view lift viewConfig model =
                         [ Toolbar.alignEnd
                         ]
                         [ Button.view (lift << Mdc)
+                            "monthly-spread__edit-monthly-spread"
+                            model.mdc
+                            [ Button.ripple
+                            , Button.onClick (lift EditClicked)
+                            ]
+                            [ text "Edit"
+                            ]
+                        , Button.view (lift << Mdc)
                             "monthly-spread__new-bullet"
                             model.mdc
                             [ Button.ripple

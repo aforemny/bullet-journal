@@ -1,0 +1,22 @@
+.edit-collection-spread {
+  &__title-wrapper {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  &__buttons-wrapper {
+    margin-top: 20px;
+
+    .mdc-button {
+      margin-right: 24px;
+    }
+
+    .mdc-button:last-child {
+      margin-right: 0;
+    }
+  }
+
+  &__wrapper + &__wrapper {
+    margin-top: 96px;
+  }
+}

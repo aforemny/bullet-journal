@@ -14,8 +14,11 @@ import UrlParser exposing (..)
 type Url
     = Index
     | CollectionSpread (Parse.ObjectId CollectionSpread)
+    | EditCollectionSpread (Parse.ObjectId CollectionSpread)
     | DailySpread (Parse.ObjectId DailySpread)
+    | EditDailySpread (Parse.ObjectId DailySpread)
     | MonthlySpread (Parse.ObjectId MonthlySpread)
+    | EditMonthlySpread (Parse.ObjectId MonthlySpread)
     | EditBullet String String (Parse.ObjectId Bullet.Any) (Maybe (Parse.ObjectId Bullet))
     | NotFound String
 
@@ -30,11 +33,20 @@ toString url =
             MonthlySpread objectId ->
                 "monthly-spread/" ++ ObjectId.toString objectId
 
+            EditMonthlySpread objectId ->
+                "monthly-spread/" ++ ObjectId.toString objectId ++ "/edit"
+
             DailySpread objectId ->
                 "daily-spread/" ++ ObjectId.toString objectId
 
+            EditDailySpread objectId ->
+                "daily-spread/" ++ ObjectId.toString objectId ++ "/edit"
+
             CollectionSpread objectId ->
                 "collection-spread/" ++ ObjectId.toString objectId
+
+            EditCollectionSpread objectId ->
+                "collection-spread/" ++ ObjectId.toString objectId ++ "/edit"
 
             EditBullet route className spreadId Nothing ->
                 route ++ "/" ++ ObjectId.toString spreadId ++ "/bullet/new"
@@ -100,6 +112,9 @@ parseUrl =
                     EditBullet "daily-spread" "DailySpread" spreadId (Just bulletId)
                 )
                 (s "daily-spread" </> objectId </> s "bullet" </> objectId)
+            , map EditCollectionSpread (s "collection-spread" </> objectId </> s "edit")
+            , map EditDailySpread (s "daily-spread" </> objectId </> s "edit")
+            , map EditMonthlySpread (s "monthly-spread" </> objectId </> s "edit")
             , map CollectionSpread (s "collection-spread" </> objectId)
             , map DailySpread (s "daily-spread" </> objectId)
             , map MonthlySpread (s "monthly-spread" </> objectId)

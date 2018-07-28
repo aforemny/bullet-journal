@@ -46,6 +46,7 @@ type Msg msg
     | DailySpreadResult (Result Parse.Error (Parse.Object DailySpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
+    | EditClicked
     | BackClicked
     | BulletClicked (Parse.ObjectId Bullet)
 
@@ -108,6 +109,14 @@ update lift viewConfig msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
+        EditClicked ->
+            ( model
+            , model.dailySpread
+                |> Maybe.map (Url.EditDailySpread << .objectId)
+                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.withDefault Cmd.none
+            )
+
         BulletClicked bulletId ->
             ( model
             , model.dailySpread
@@ -160,6 +169,14 @@ view lift viewConfig model =
                         [ Toolbar.alignEnd
                         ]
                         [ Button.view (lift << Mdc)
+                            "daily-spread__edit-daily-spread"
+                            model.mdc
+                            [ Button.ripple
+                            , Button.onClick (lift EditClicked)
+                            ]
+                            [ text "Edit"
+                            ]
+                        , Button.view (lift << Mdc)
                             "daily-spread__new-bullet"
                             model.mdc
                             [ Button.ripple
