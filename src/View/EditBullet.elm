@@ -443,7 +443,7 @@ view lift viewConfig model =
                             ]
                         , Dialog.body []
                             [ text """
-Do you really want to delete that task?
+Do you really want to delete this bullet?"
                           """
                             ]
                         , Dialog.footer []

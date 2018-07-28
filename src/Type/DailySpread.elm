@@ -1,5 +1,6 @@
 module Type.DailySpread exposing (..)
 
+import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
@@ -163,3 +164,18 @@ create parse dailySpread =
                             createNewDailySpread
                                 |> Task.map .objectId
                 )
+
+update :
+    Parse.Config
+    -> Parse.ObjectId DailySpread
+    -> DailySpread
+    -> Task Parse.Error { updatedAt : Date }
+update parse dailySpreadId dailySpread =
+    Parse.toTask parse
+        (Parse.update "DailySpread" encode dailySpreadId dailySpread)
+
+
+delete : Parse.Config -> Parse.ObjectId DailySpread -> Task Parse.Error {}
+delete parse dailySpreadId =
+    Parse.toTask parse
+        (Parse.delete "DailySpread" dailySpreadId)
