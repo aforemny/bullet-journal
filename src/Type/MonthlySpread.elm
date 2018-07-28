@@ -1,5 +1,6 @@
 module Type.MonthlySpread exposing (..)
 
+import Date exposing (Date)
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
@@ -156,3 +157,19 @@ create parse monthlySpread =
                             createNewMonthlySpread
                                 |> Task.map .objectId
                 )
+
+
+update :
+    Parse.Config
+    -> Parse.ObjectId MonthlySpread
+    -> MonthlySpread
+    -> Task Parse.Error { updatedAt : Date }
+update parse monthlySpreadId monthlySpread =
+    Parse.toTask parse
+        (Parse.update "MonthlySpread" encode monthlySpreadId monthlySpread)
+
+
+delete : Parse.Config -> Parse.ObjectId MonthlySpread -> Task Parse.Error {}
+delete parse monthlySpreadId =
+    Parse.toTask parse
+        (Parse.delete "MonthlySpread" monthlySpreadId)
