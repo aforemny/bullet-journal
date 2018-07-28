@@ -1,4 +1,4 @@
-# bujo
+# bullet-journal
 
 [Bullet Journal](http://bulletjournal.com/) implementation in
 [Elm](http://elm-lang.org/), backed by [Parse](https://parseplatform.org/) and
