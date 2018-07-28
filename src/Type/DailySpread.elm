@@ -101,6 +101,31 @@ get parse objectId =
     Parse.toTask parse (Parse.get "DailySpread" decode objectId)
 
 
+getBy :
+    Parse.Config
+    -> Year
+    -> Month
+    -> DayOfMonth
+    -> Task Parse.Error (Maybe (Parse.Object DailySpread))
+getBy parse year month dayOfMonth =
+    Parse.toTask parse
+        (Parse.query decode
+            (Parse.emptyQuery "DailySpread"
+                |> \query ->
+                    { query
+                        | whereClause =
+                            Parse.and
+                                [ Parse.equalTo "year" (Encode.int year)
+                                , Parse.equalTo "month" (Encode.int month)
+                                , Parse.equalTo "dayOfMonth" (Encode.int dayOfMonth)
+                                ]
+                        , limit = Just 1
+                    }
+            )
+        )
+        |> Task.map List.head
+
+
 create : Parse.Config -> DailySpread -> Task Parse.Error (Parse.ObjectId DailySpread)
 create parse dailySpread =
     let

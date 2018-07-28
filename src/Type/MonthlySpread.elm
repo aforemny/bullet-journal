@@ -96,6 +96,31 @@ get parse objectId =
     Parse.toTask parse (Parse.get "MonthlySpread" decode objectId)
 
 
+
+getBy :
+    Parse.Config
+    -> Year
+    -> Month
+    -> Task Parse.Error (Maybe (Parse.Object MonthlySpread))
+getBy parse year month =
+    Parse.toTask parse
+        (Parse.query decode
+            (Parse.emptyQuery "MonthlySpread"
+                |> \query ->
+                    { query
+                        | whereClause =
+                            Parse.and
+                                [ Parse.equalTo "year" (Encode.int year)
+                                , Parse.equalTo "month" (Encode.int month)
+                                ]
+                        , limit = Just 1
+                    }
+            )
+        )
+        |> Task.map List.head
+
+
+
 create : Parse.Config -> MonthlySpread -> Task Parse.Error (Parse.ObjectId MonthlySpread)
 create parse monthlySpread =
     let

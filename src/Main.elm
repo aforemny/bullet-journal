@@ -18,6 +18,7 @@ import Navigation
 import Parse
 import Ports
 import Private.ObjectId as ObjectId
+import Task exposing (Task)
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
@@ -44,6 +45,7 @@ type alias Model =
     , editBullet : Maybe (View.EditBullet.Model Msg)
     , today : Calendar.Day
     , now : Date
+    , error : Maybe Parse.Error
     }
 
 
@@ -58,6 +60,7 @@ defaultModel =
     , editBullet = Nothing
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
+    , error = Nothing
     }
 
 
@@ -73,6 +76,10 @@ type Msg
     | DailySpreadMsg (View.DailySpread.Msg Msg)
     | IndexMsg (View.Index.Msg Msg)
     | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
+    | TodayClicked
+    | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
+    | MonthClicked
+    | MonthClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
 
 
 type alias Flags =
@@ -264,6 +271,64 @@ update msg model =
                 , Navigation.newUrl (Url.toString Url.Index)
                 )
 
+            TodayClicked ->
+                let
+                    ( year, month, dayOfMonth ) =
+                        Calendar.toGregorian model.today
+                in
+                    ( model
+                    , Task.attempt TodayClickedResult
+                        (DailySpread.getBy viewConfig.parse year month dayOfMonth
+                            |> Task.andThen
+                                (\dailySpread ->
+                                    case dailySpread of
+                                        Just dailySpread ->
+                                            Task.succeed dailySpread.objectId
+
+                                        Nothing ->
+                                            DailySpread.create viewConfig.parse
+                                                (DailySpread.empty year month dayOfMonth)
+                                )
+                        )
+                    )
+
+            TodayClickedResult (Err err) ->
+                ( { model | error = Just err }, Cmd.none )
+
+            TodayClickedResult (Ok dailySpreadId) ->
+                ( model
+                , Navigation.newUrl (Url.toString (Url.DailySpread dailySpreadId))
+                )
+
+            MonthClicked ->
+                let
+                    ( year, month, _ ) =
+                        Calendar.toGregorian model.today
+                in
+                    ( model
+                    , Task.attempt MonthClickedResult
+                        (MonthlySpread.getBy viewConfig.parse year month
+                            |> Task.andThen
+                                (\dailySpread ->
+                                    case dailySpread of
+                                        Just dailySpread ->
+                                            Task.succeed dailySpread.objectId
+
+                                        Nothing ->
+                                            MonthlySpread.create viewConfig.parse
+                                                (MonthlySpread.empty year month)
+                                )
+                        )
+                    )
+
+            MonthClickedResult (Err err) ->
+                ( { model | error = Just err }, Cmd.none )
+
+            MonthClickedResult (Ok monthlySpreadId) ->
+                ( model
+                , Navigation.newUrl (Url.toString (Url.MonthlySpread monthlySpreadId))
+                )
+
 
 makeViewConfig : Model -> View.Config Msg
 makeViewConfig model =
@@ -281,13 +346,36 @@ makeViewConfig model =
                     [ Toolbar.fixed
                     ]
                     [ Toolbar.row []
-                        (Toolbar.section
-                            [ Toolbar.alignStart
+                        (List.concat
+                            [ [ Toolbar.section
+                                    [ Toolbar.alignStart
+                                    , Toolbar.shrinkToFit
+                                    ]
+                                    [ config.menuIcon
+                                    , Toolbar.title [] [ text config.title ]
+                                    ]
+                              ]
+                            , [ Toolbar.section
+                                    [ Toolbar.alignStart
+                                    ]
+                                    [ Button.view Mdc
+                                        "toolbar__today"
+                                        model.mdc
+                                        [ Button.onClick MonthClicked
+                                        ]
+                                        [ text "Month"
+                                        ]
+                                    , Button.view Mdc
+                                        "toolbar__today"
+                                        model.mdc
+                                        [ Button.onClick TodayClicked
+                                        ]
+                                        [ text "Today"
+                                        ]
+                                    ]
+                              ]
+                            , config.additionalSections
                             ]
-                            [ config.menuIcon
-                            , Toolbar.title [] [ text config.title ]
-                            ]
-                            :: config.additionalSections
                         )
                     ]
         , today = model.today
