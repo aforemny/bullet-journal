@@ -20,3 +20,4 @@ clean:
 
 distclean: clean
 	rm -rf elm-stuff
+	rm -rf node_modules

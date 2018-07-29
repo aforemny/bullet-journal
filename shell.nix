@@ -6,5 +6,5 @@ let
 in
 mkDerivation {
   name = "bujo";
-  buildInputs = [ gcc mongodb elm-make ];
+  buildInputs = [ elm-make gcc mongodb nodejs-8_x python sassc ];
 }

@@ -8,8 +8,9 @@
 ## Build instructions
 
 ```sh
-git clone github.com:aforemny/bujo.git
-git submodule init --update
+git clone github.com:aforemny/bullet-journal.git
+cd bullet-journal
+git submodule update --init
 ```
 
 
