@@ -2,6 +2,7 @@
 @import "@material/theme/mixins";
 
 @import "@material/button/mdc-button";
+@import "@material/card/mdc-card";
 @import "@material/checkbox/mdc-checkbox";
 @import "@material/dialog/mdc-dialog";
 @import "@material/fab/mdc-fab";
@@ -23,19 +24,27 @@
 @import "monthly-spread";
 
 
-.main {
+html, body {
+  min-height: 100%;
   display: flex;
-  flex-flow: column nowrap;
+  flex-flow: row wrap;
 }
 
-.main__wrapper {
+body {
+  flex: 1 1 100%;
+  align-self: stretch;
+}
+
+.main {
   display: flex;
-  flex-flow: column nowrap;
-  width: 100%;
+  flex-flow: row wrap;
+  width: calc(100% - 60px);
   max-width: 1140px;
   margin-left: auto;
   margin-right: auto;
   padding-top: 64px;
+
+  max-height: calc(100vh - 128px);
 }
 
 .mdc-toolbar {

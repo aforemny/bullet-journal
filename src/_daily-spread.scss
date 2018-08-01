@@ -1,25 +1,27 @@
 .daily-spread {
+  flex: 1 1 100%;
+
+  &__wrapper {
+    flex: 1 1 100%;
+    max-height: calc(100% - 64px);
+  }
+
+  &__primary {
+    padding: 1rem;
+  }
+
+  &__title {
+    @include mdc-typography(headline5);
+    margin: 0;
+  }
+
+  &__subtitle {
+    @include mdc-typography(subtitle2);
+    @include mdc-theme-prop(color, text-secondary-on-background);
+    margin: 0;
+  }
 
   &__bullet-wrapper {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-
-  }
-
-  &__item {
-  }
-
-  &__item__day-of-month {
-    width: 20px;
-    overflow: hidden;
-  }
-
-  &__item__day-of-week {
-    width: 20px;
-    overflow: hidden;
-  }
-
-  &__item__text {
+    border-top: 1px solid #ccc;
   }
 }

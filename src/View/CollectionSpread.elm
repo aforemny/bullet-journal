@@ -1,14 +1,15 @@
 module View.CollectionSpread exposing (..)
 
 import Date exposing (Date)
+import Html exposing (Html, text)
 import Html.Attributes as Html
 import Html.Events as Html
-import Html exposing (Html, text)
 import Material
 import Material.Button as Button
+import Material.Card as Card
 import Material.Icon as Icon
 import Material.List as Lists
-import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -144,44 +145,58 @@ view lift viewConfig model =
             collectionSpread_
                 |> Maybe.map
                     CollectionSpread.fromParseObject
+
+        title =
+            collectionSpread
+                |> Maybe.map CollectionSpread.title
+                |> Maybe.withDefault "Collection"
     in
-        Html.div
-            [ Html.class "collection-spread"
-            ]
-            [ viewConfig.toolbar
-                { title =
-                    collectionSpread
-                        |> Maybe.map CollectionSpread.title
-                        |> Maybe.withDefault ""
-                , menuIcon =
-                    Icon.view
-                        [ Toolbar.menuIcon
-                        , Options.onClick (lift BackClicked)
+    Html.div
+        [ Html.class "collection-spread"
+        ]
+        [ viewConfig.toolbar
+            { title =
+                title
+            , menuIcon =
+                Icon.view
+                    [ Toolbar.menuIcon
+                    , Options.onClick (lift BackClicked)
+                    ]
+                    "arrow_back"
+            , additionalSections =
+                [ Toolbar.section
+                    [ Toolbar.alignEnd
+                    ]
+                    [ Button.view (lift << Mdc)
+                        "collection-spread__edit-collection-spread"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.onClick (lift EditClicked)
                         ]
-                        "arrow_back"
-                , additionalSections =
-                    [ Toolbar.section
-                        [ Toolbar.alignEnd
+                        [ text "Edit"
                         ]
-                        [ Button.view (lift << Mdc)
-                            "collection-spread__edit-collection-spread"
-                            model.mdc
-                            [ Button.ripple
-                            , Button.onClick (lift EditClicked)
-                            ]
-                            [ text "Edit"
-                            ]
-                        , Button.view (lift << Mdc)
-                            "collection-spread__new-bullet"
-                            model.mdc
-                            [ Button.ripple
-                            , Button.onClick (lift NewBulletClicked)
-                            ]
-                            [ text "New bullet"
-                            ]
+                    , Button.view (lift << Mdc)
+                        "collection-spread__new-bullet"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.onClick (lift NewBulletClicked)
+                        ]
+                        [ text "New bullet"
                         ]
                     ]
-                }
+                ]
+            }
+        , Card.view
+            [ cs "collection-spread__wrapper" ]
+            [ Html.div
+                [ Html.class "collection-spread__primary" ]
+                [ Html.div
+                    [ Html.class "collection-spread__title" ]
+                    [ text title ]
+                , Html.div
+                    [ Html.class "collection-spread__subtitle" ]
+                    [ text "Describe collection" ]
+                ]
             , Lists.ol
                 [ cs "collection-spread__bullet-wrapper"
                 ]
@@ -198,3 +213,4 @@ view lift viewConfig model =
                     model.bullets
                 )
             ]
+        ]

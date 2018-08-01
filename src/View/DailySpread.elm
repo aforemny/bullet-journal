@@ -1,15 +1,16 @@
 module View.DailySpread exposing (..)
 
 import Dict exposing (Dict)
+import Html exposing (Html, text)
 import Html.Attributes as Html
 import Html.Events as Html
-import Html exposing (Html, text)
 import Json.Decode as Decode exposing (Decoder)
 import Material
 import Material.Button as Button
+import Material.Card as Card
 import Material.Icon as Icon
 import Material.List as Lists
-import Material.Options as Options exposing (styled, css, cs, when)
+import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
 import Navigation
 import Parse
@@ -148,45 +149,59 @@ view lift viewConfig model =
             dailySpread_
                 |> Maybe.map DailySpread.fromParseObject
 
+        title =
+            dailySpread
+                |> Maybe.map DailySpread.title
+                |> Maybe.withDefault ""
+
         bullets =
             model.bullets
     in
-        Html.div
-            [ Html.class "daily-spread" ]
-            [ viewConfig.toolbar
-                { title =
-                    dailySpread
-                        |> Maybe.map DailySpread.title
-                        |> Maybe.withDefault ""
-                , menuIcon =
-                    Icon.view
-                        [ Toolbar.menuIcon
-                        , Options.onClick (lift BackClicked)
+    Html.div
+        [ Html.class "daily-spread" ]
+        [ viewConfig.toolbar
+            { title =
+                title
+            , menuIcon =
+                Icon.view
+                    [ Toolbar.menuIcon
+                    , Options.onClick (lift BackClicked)
+                    ]
+                    "arrow_back"
+            , additionalSections =
+                [ Toolbar.section
+                    [ Toolbar.alignEnd
+                    ]
+                    [ Button.view (lift << Mdc)
+                        "daily-spread__edit-daily-spread"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.onClick (lift EditClicked)
                         ]
-                        "arrow_back"
-                , additionalSections =
-                    [ Toolbar.section
-                        [ Toolbar.alignEnd
+                        [ text "Edit"
                         ]
-                        [ Button.view (lift << Mdc)
-                            "daily-spread__edit-daily-spread"
-                            model.mdc
-                            [ Button.ripple
-                            , Button.onClick (lift EditClicked)
-                            ]
-                            [ text "Edit"
-                            ]
-                        , Button.view (lift << Mdc)
-                            "daily-spread__new-bullet"
-                            model.mdc
-                            [ Button.ripple
-                            , Button.onClick (lift NewBulletClicked)
-                            ]
-                            [ text "New bullet"
-                            ]
+                    , Button.view (lift << Mdc)
+                        "daily-spread__new-bullet"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.onClick (lift NewBulletClicked)
+                        ]
+                        [ text "New bullet"
                         ]
                     ]
-                }
+                ]
+            }
+        , Card.view
+            [ cs "daily-spread__wrapper" ]
+            [ Html.div
+                [ Html.class "daily-spread__primary" ]
+                [ Html.div
+                    [ Html.class "daily-spread__title" ]
+                    [ text title ]
+                , Html.div
+                    [ Html.class "daily-spread__subtitle" ]
+                    [ text "The Daily Log is designed for day-to-day use." ]
+                ]
             , Lists.ol
                 [ cs "daily-spread__bullet-wrapper"
                 ]
@@ -203,3 +218,4 @@ view lift viewConfig model =
                     bullets
                 )
             ]
+        ]

@@ -458,37 +458,33 @@ view model =
             [ cs "main"
             , Toolbar.fixedAdjust "toolbar" model.mdc
             ]
-            [ Html.div
-                [ Html.class "main__wrapper"
-                ]
-                [ case model.url of
-                    Url.Index ->
-                        viewIndex viewConfig model
+            [ case model.url of
+                Url.Index ->
+                    viewIndex viewConfig model
 
-                    Url.MonthlySpread objectId ->
-                        viewMonthlySpread viewConfig model
+                Url.MonthlySpread objectId ->
+                    viewMonthlySpread viewConfig model
 
-                    Url.DailySpread objectId ->
-                        viewDailySpread viewConfig model
+                Url.DailySpread objectId ->
+                    viewDailySpread viewConfig model
 
-                    Url.CollectionSpread objectId ->
-                        viewCollectionSpread viewConfig model
+                Url.CollectionSpread objectId ->
+                    viewCollectionSpread viewConfig model
 
-                    Url.EditMonthlySpread objectId ->
-                        viewEditMonthlySpread viewConfig model
+                Url.EditMonthlySpread objectId ->
+                    viewEditMonthlySpread viewConfig model
 
-                    Url.EditDailySpread objectId ->
-                        viewEditDailySpread viewConfig model
+                Url.EditDailySpread objectId ->
+                    viewEditDailySpread viewConfig model
 
-                    Url.EditCollectionSpread objectId ->
-                        viewEditCollectionSpread viewConfig model
+                Url.EditCollectionSpread objectId ->
+                    viewEditCollectionSpread viewConfig model
 
-                    Url.NotFound urlString ->
-                        viewNotFound viewConfig urlString model
+                Url.NotFound urlString ->
+                    viewNotFound viewConfig urlString model
 
-                    Url.EditBullet route className objectId bulletId ->
-                        viewEditBullet viewConfig model
-                ]
+                Url.EditBullet route className objectId bulletId ->
+                    viewEditBullet viewConfig model
             ]
 
 

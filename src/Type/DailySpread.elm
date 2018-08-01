@@ -83,7 +83,7 @@ canonicalDate dailySpread =
 title : DailySpread -> String
 title dailySpread =
     String.join " "
-        [ toString dailySpread.dayOfMonth
+        [ toString dailySpread.dayOfMonth ++ "."
         , case Calendar.defaultTimeLocale of
             Calendar.TimeLocale { months } ->
                 List.drop (dailySpread.month - 1) months

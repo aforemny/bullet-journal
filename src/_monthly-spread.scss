@@ -1,17 +1,45 @@
 .monthly-spread {
+  display: flex;
+  flex: 1 1 100%;
+  max-height: calc(100% - 64px);
 
   &__wrapper {
+    flex: 1 1 100%;
+    position: relative;
+  }
+
+  &__primary {
+    padding: 1rem;
+  }
+
+  &__title {
+    @include mdc-typography(headline5);
+    margin: 0;
+  }
+
+  &__subtitle {
+    @include mdc-typography(subtitle2);
+    @include mdc-theme-prop(color, text-secondary-on-background);
+    margin: 0;
+  }
+
+  &__content-wrapper {
+    border-top: 1px solid #ccc;
     display: flex;
     flex-flow: row nowrap;
     justify-content: space-between;
+    overflow: hidden;
   }
 
   &__days-wrapper,
   &__bullets-wrapper {
-    list-style-type: none;
+    display: flex;
+    flex-flow: column nowrap;
+    max-height: 100%;
+    flex: 0 0 50%;
+    overflow-y: auto;
+    padding: 1rem;
     margin: 0;
-    padding: 0;
-    width: calc(50% - 64px);
   }
 
   &__day {
