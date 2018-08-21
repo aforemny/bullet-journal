@@ -1,6 +1,6 @@
 build: node_modules
 	mkdir -p public/fonts
-	elm-make --debug --yes src/Main.elm --output public/elm.js
+	elm-make --yes src/Main.elm --output public/elm.js
 	cp page.html public/index.html
 	cp elm-mdc.js public/
 	cp node_modules/normalize.css/normalize.css public/
@@ -10,6 +10,7 @@ build: node_modules
 	cp -r node_modules/roboto-fontface/fonts/roboto public/fonts/
 	sassc -I node_modules src/main.scss > site.css
 	./node_modules/.bin/postcss site.css --use autoprefixer > public/site.css
+	rsync -r imgs public
 
 node_modules:
 	npm i

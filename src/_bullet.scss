@@ -1,0 +1,30 @@
+.bullet {
+
+  .mdc-list-item__graphic {
+    margin-right: 8px;
+  }
+
+  &--event .mdc-list-item__graphic {
+    background-image: url('imgs/baseline-circle-24px.svg');
+  }
+
+  &--note .mdc-list-item__graphic {
+    background-image: url('imgs/baseline-minus-24px.svg');
+  }
+
+  &--task--unchecked .mdc-list-item__graphic {
+    background-image: url('imgs/baseline-dot-24px.svg');
+  }
+
+  &--task--checked .mdc-list-item__graphic {
+    background-image: url('imgs/baseline-checkmark-24px.svg');
+  }
+
+  &--task--migrated .mdc-list-item__graphic {
+    background-image: url('imgs/baseline-dot-24px.svg');
+  }
+
+  .mdc-list-item__text {
+    max-width: calc(100vw - #{32px + 24px + 32px} - 1rem);
+  }
+}

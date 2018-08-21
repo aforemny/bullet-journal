@@ -4,6 +4,7 @@
 @import "@material/button/mdc-button";
 @import "@material/card/mdc-card";
 @import "@material/checkbox/mdc-checkbox";
+@import "@material/chips/mdc-chips";
 @import "@material/dialog/mdc-dialog";
 @import "@material/fab/mdc-fab";
 @import "@material/list/mdc-list";
@@ -12,6 +13,12 @@
 @import "@material/textfield/mdc-text-field";
 @import "@material/toolbar/mdc-toolbar";
 @import "@material/typography/mdc-typography";
+
+@mixin mobile {
+  @media (max-width: 720px) {
+    @content
+  }
+}
 
 @import "bullet";
 @import "collection-spread";
@@ -22,6 +29,7 @@
 @import "edit-monthly-spread";
 @import "index";
 @import "monthly-spread";
+@import "start";
 
 
 html, body {
@@ -45,6 +53,12 @@ body {
   padding-top: 64px;
 
   max-height: calc(100vh - 128px);
+
+  @include mobile {
+    padding-top: 0;
+    margin: 0.5rem !important;
+    width: 100%;
+  }
 }
 
 .mdc-toolbar {

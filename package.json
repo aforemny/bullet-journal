@@ -20,12 +20,9 @@
   "author": "Alexander Foremny <aforemny@posteo.de>",
   "license": "BSD-3-Clause",
   "devDependencies": {
-    "autoprefixer": "^9.0.1",
-    "concurrently": "^3.6.0",
-    "express": "^4.16.3",
     "@material/button": "^0.37.1",
     "@material/checkbox": "^0.37.1",
-    "material-design-icons": "^3.0.1",
+    "@material/chips": "^0.37.1",
     "@material/dialog": "^0.37.1",
     "@material/fab": "^0.37.1",
     "@material/list": "^0.37.1",
@@ -35,6 +32,11 @@
     "@material/theme": "^0.35.0",
     "@material/toolbar": "^0.37.1",
     "@material/typography": "^0.37.1",
+    "@material/card": "^0.37.1",
+    "autoprefixer": "^9.0.1",
+    "concurrently": "^3.6.0",
+    "express": "^4.16.3",
+    "material-design-icons": "^3.0.1",
     "normalize.css": "^8.0.0",
     "parse-dashboard": "^1.2.0",
     "parse-server": "^2.8.2",
@@ -42,7 +44,6 @@
     "roboto-fontface": "^0.9.0"
   },
   "dependencies": {
-    "@material/card": "^0.37.1",
     "postcss-cli": "^6.0.0"
   }
 }

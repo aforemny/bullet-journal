@@ -151,10 +151,13 @@ update lift viewConfig msg model =
                             Bullet.Note
 
                 bullet =
-                    { spreadClass = model.spreadClass
-                    , spreadId = model.spreadId
+                    { spreadClass = Just model.spreadClass
+                    , spreadId = Just model.spreadId
                     , state = state
                     , text = model.text
+                    , year = Nothing
+                    , month = Nothing
+                    , dayOfMonth = Nothing
                     }
             in
                 ( model

@@ -7,5 +7,5 @@ parseConfig : Parse.Config
 parseConfig =
     Parse.simpleConfig "bujo" "bujo"
         |> (\config ->
-                { config | serverUrl = "http://localhost:1337/parse" }
+                { config | serverUrl = "/parse" }
            )

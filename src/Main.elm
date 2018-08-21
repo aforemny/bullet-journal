@@ -37,6 +37,7 @@ import View.EditDailySpread
 import View.EditMonthlySpread
 import View.Index
 import View.MonthlySpread
+import View.Start
 
 
 type alias Model =
@@ -50,6 +51,7 @@ type alias Model =
     , editDailySpread : View.EditDailySpread.Model Msg
     , editMonthlySpread : View.EditMonthlySpread.Model Msg
     , editBullet : Maybe (View.EditBullet.Model Msg)
+    , start : View.Start.Model Msg
     , today : Calendar.Day
     , now : Date
     , error : Maybe Parse.Error
@@ -68,6 +70,7 @@ defaultModel =
     , editCollectionSpread = View.EditCollectionSpread.defaultModel
     , editDailySpread = View.EditDailySpread.defaultModel
     , editBullet = Nothing
+    , start = View.Start.defaultModel
     , today = Calendar.fromGregorian 1970 1 1
     , now = Date.fromTime 0
     , error = Nothing
@@ -89,6 +92,7 @@ type Msg
     | EditCollectionSpreadMsg (View.EditCollectionSpread.Msg Msg)
     | EditDailySpreadMsg (View.EditDailySpread.Msg Msg)
     | EditMonthlySpreadMsg (View.EditMonthlySpread.Msg Msg)
+    | StartMsg (View.Start.Msg Msg)
     | TodayClicked
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | MonthClicked
@@ -126,10 +130,14 @@ init flags location =
                 , now = Ports.readDateUnsafe flags.now
                 , url = url
             }
+
+        ( start, startCmd ) =
+          View.Start.init StartMsg viewConfig model.start
     in
-    ( model
+    ( { model | start = start }
     , Cmd.batch
         [ Material.init Mdc
+        , startCmd
         ]
     )
         |> initView viewConfig url
@@ -147,6 +155,7 @@ subscriptions model =
         , View.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
         , View.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
         , View.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
+        , View.Start.subscriptions StartMsg model.start
         , View.EditDailySpread.subscriptions EditDailySpreadMsg model.editDailySpread
         , model.editBullet
             |> Maybe.map (View.EditBullet.subscriptions EditBulletMsg)
@@ -316,6 +325,12 @@ update msg model =
                 |> Tuple.mapFirst
                     (\index -> { model | index = index })
 
+        StartMsg msg_ ->
+            model.start
+                |> View.Start.update StartMsg viewConfig msg_
+                |> Tuple.mapFirst
+                    (\start -> { model | start = start })
+
         EditBulletMsg msg_ ->
             model.editBullet
                 |> Maybe.map (View.EditBullet.update EditBulletMsg viewConfig msg_)
@@ -455,7 +470,7 @@ view model =
         ]
         [ case model.url of
             Url.Index ->
-                viewIndex viewConfig model
+                viewStart viewConfig model
 
             Url.MonthlySpread objectId ->
                 viewMonthlySpread viewConfig model
@@ -527,6 +542,11 @@ viewNotFound viewConfig urlString model =
 viewIndex : View.Config Msg -> Model -> Html Msg
 viewIndex viewConfig model =
     View.Index.view IndexMsg viewConfig model.index
+
+
+viewStart : View.Config Msg -> Model -> Html Msg
+viewStart viewConfig model =
+    View.Start.view StartMsg viewConfig model.start
 
 
 viewEditBullet : View.Config Msg -> Model -> Html Msg

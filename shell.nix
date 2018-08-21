@@ -1,10 +1,8 @@
 { pkgs ? import <nixpkgs> {} }:
 with pkgs;
 with stdenv;
-let
-  elm-make = elmPackages.elm-make;
-in
+with elmPackages;
 mkDerivation {
   name = "bujo";
-  buildInputs = [ elm-make gcc mongodb nodejs-9_x python sassc ];
+  buildInputs = [ elm-package elm-make gcc mongodb nodejs-9_x python sassc ];
 }

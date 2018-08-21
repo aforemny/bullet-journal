@@ -1,59 +1,70 @@
 module Type.Bullet exposing (..)
 
 import Date exposing (Date)
-import Html.Attributes as Html
 import Html exposing (Html, text)
+import Html.Attributes as Html
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Material.List as Lists
-import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Options as Options exposing (cs, css, styled, when)
 import Parse
 import Parse.Decode
 import Parse.Encode
 import Private.ObjectId as ObjectId
 import Private.Pointer as Pointer
-import Task
 import Task exposing (Task)
 
 
 type alias Bullet =
-    { spreadClass : String
-    , spreadId : Parse.ObjectId Any
+    { spreadClass : Maybe String
+    , spreadId : Maybe (Parse.ObjectId Any)
     , state : State
     , text : String
+    , year : Maybe Int
+    , month : Maybe Int
+    , dayOfMonth : Maybe Int
     }
 
 
-empty : String -> Parse.ObjectId Any -> Bullet
+empty : Bullet
 empty =
     emptyNote
 
 
-emptyNote : String -> Parse.ObjectId Any -> Bullet
-emptyNote spreadClass spreadId =
-    { spreadClass = spreadClass
-    , spreadId = spreadId
+emptyNote : Bullet
+emptyNote =
+    { spreadClass = Nothing
+    , spreadId = Nothing
     , state = Note
     , text = ""
+    , year = Nothing
+    , month = Nothing
+    , dayOfMonth = Nothing
     }
 
 
-emptyTask : String -> Parse.ObjectId Any -> Bullet
-emptyTask spreadClass spreadId =
-    { spreadClass = spreadClass
-    , spreadId = spreadId
+emptyTask : Bullet
+emptyTask =
+    { spreadClass = Nothing
+    , spreadId = Nothing
     , state = Task Unchecked
     , text = ""
+    , year = Nothing
+    , month = Nothing
+    , dayOfMonth = Nothing
     }
 
 
-emptyEvent : String -> Parse.ObjectId Any -> Bullet
-emptyEvent spreadClass spreadId =
-    { spreadClass = spreadClass
-    , spreadId = spreadId
+emptyEvent : Bullet
+emptyEvent =
+    { spreadClass = Nothing
+    , spreadId = Nothing
     , state = Event
     , text = ""
+    , year = Nothing
+    , month = Nothing
+    , dayOfMonth = Nothing
     }
 
 
@@ -63,23 +74,29 @@ fromParseObject bullet =
     , spreadId = bullet.spreadId
     , state = bullet.state
     , text = bullet.text
+    , year = bullet.year
+    , month = bullet.month
+    , dayOfMonth = bullet.dayOfMonth
     }
 
 
 encode : Bullet -> Value
 encode bullet =
     Encode.object
-        [ ( "spreadClass", Encode.string bullet.spreadClass )
-        , ( "spreadId", Parse.Encode.objectId bullet.spreadId )
+        [ ( "spreadClass", Maybe.withDefault Encode.null (Maybe.map Encode.string bullet.spreadClass) )
+        , ( "spreadId", Maybe.withDefault Encode.null (Maybe.map Parse.Encode.objectId bullet.spreadId) )
         , ( "state", encodeState bullet.state )
         , ( "text", Encode.string bullet.text )
+        , ( "year", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.year) )
+        , ( "month", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.month) )
+        , ( "dayOfMonth", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.dayOfMonth) )
         ]
 
 
 decode : Decoder (Parse.Object Bullet)
 decode =
     Decode.succeed
-        (\objectId createdAt updatedAt spreadClass spreadId state text ->
+        (\objectId createdAt updatedAt spreadClass spreadId state text year month dayOfMonth ->
             { objectId = objectId
             , createdAt = createdAt
             , updatedAt = updatedAt
@@ -87,15 +104,21 @@ decode =
             , spreadId = spreadId
             , state = state
             , text = text
+            , year = year
+            , month = month
+            , dayOfMonth = dayOfMonth
             }
         )
         |> Decode.required "objectId" Parse.Decode.objectId
         |> Decode.required "createdAt" Parse.Decode.date
         |> Decode.required "updatedAt" Parse.Decode.date
-        |> Decode.required "spreadClass" Decode.string
-        |> Decode.required "spreadId" Parse.Decode.objectId
+        |> Decode.optional "spreadClass" (Decode.map Just Decode.string) Nothing
+        |> Decode.optional "spreadId" (Decode.map Just Parse.Decode.objectId) Nothing
         |> Decode.required "state" decodeState
         |> Decode.required "text" Decode.string
+        |> Decode.optional "year" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "month" (Decode.map Just Decode.int) Nothing
+        |> Decode.optional "dayOfMonth" (Decode.map Just Decode.int) Nothing
 
 
 type Any
@@ -146,22 +169,22 @@ decodeState =
         decodeTask =
             Decode.map Task (Decode.at [ "taskState" ] decodeTaskState)
     in
-        Decode.at [ "ctor" ] Decode.string
-            |> Decode.andThen
-                (\ctor ->
-                    case ctor of
-                        "event" ->
-                            decodeEvent
+    Decode.at [ "ctor" ] Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "event" ->
+                        decodeEvent
 
-                        "note" ->
-                            decodeNote
+                    "note" ->
+                        decodeNote
 
-                        "task" ->
-                            decodeTask
+                    "task" ->
+                        decodeTask
 
-                        _ ->
-                            Decode.fail ("expected event, note or task but got " ++ ctor)
-                )
+                    _ ->
+                        Decode.fail ("expected event, note or task but got " ++ ctor)
+            )
 
 
 type TaskState
@@ -221,14 +244,15 @@ getOf parse spreadClass spreadId =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "Bullet"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
-                                , Parse.equalTo "spreadId" (Parse.Encode.objectId spreadId)
-                                ]
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "spreadClass" (Encode.string spreadClass)
+                                    , Parse.equalTo "spreadId" (Parse.Encode.objectId spreadId)
+                                    ]
+                        }
+                   )
             )
         )
 
@@ -250,12 +274,12 @@ update parse bulletId bullet =
     Parse.toTask parse (Parse.update "Bullet" encode bulletId bullet)
 
 
-delete
-  : Parse.Config
-  -> Parse.ObjectId Bullet
-  -> Task Parse.Error {}
+delete :
+    Parse.Config
+    -> Parse.ObjectId Bullet
+    -> Task Parse.Error {}
 delete parse bulletId =
-  Parse.toTask parse (Parse.delete "Bullet" bulletId)
+    Parse.toTask parse (Parse.delete "Bullet" bulletId)
 
 
 type alias Config msg =
