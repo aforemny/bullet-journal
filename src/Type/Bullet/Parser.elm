@@ -23,10 +23,40 @@ parser =
         ]
 
 
-eventParser =
-    succeed (\text -> { emptyEvent | text = text })
-        |. symbol "O"
+bulletParser symbolParser ctor =
+    oneOf
+    [ succeed ctor
+        |. symbolParser
         |= textParser
+    ]
+
+
+eventParser =
+    bulletParser (symbol "O") (\text -> { emptyEvent | text = text })
+
+
+uncheckedTaskParser =
+    bulletParser
+        (oneOf
+            [ symbol "."
+            , symbol "[]"
+            , symbol "[ ]"
+            ]
+        )
+        (\text -> { emptyTask | text = text })
+
+
+checkedTaskParser =
+    bulletParser
+        (symbol "[x]")
+        (\text ->
+            { emptyTask | text = text, state = Bullet.Task Bullet.Checked }
+        )
+
+
+noteParser =
+    bulletParser (symbol "-")
+        (\text -> { emptyNote | text = text })
 
 
 taskParser =
@@ -34,31 +64,6 @@ taskParser =
         [ checkedTaskParser
         , uncheckedTaskParser
         ]
-
-
-uncheckedTaskParser =
-    succeed (\text -> { emptyTask | text = text })
-        |. oneOf
-            [ symbol "."
-            , symbol "[]"
-            , symbol "[ ]"
-            ]
-        |= textParser
-
-
-checkedTaskParser =
-    succeed
-        (\text ->
-            { emptyTask | text = text, state = Bullet.Task Bullet.Checked }
-        )
-        |. symbol "[x]"
-        |= textParser
-
-
-noteParser =
-    succeed (\text -> { emptyNote | text = text })
-        |. symbol "-"
-        |= textParser
 
 
 spaces =
