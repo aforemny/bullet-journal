@@ -62,15 +62,15 @@ init lift { today, parse } model =
             Parse.toTask parse
                 (Parse.query Bullet.decode
                     (Parse.emptyQuery "Bullet"
-                        |> (\query ->
-                                { query
-                                    | whereClause =
-                                        Parse.and
-                                            [ Parse.equalTo "year" (Encode.int year)
-                                            , Parse.equalTo "month" (Encode.int month)
-                                            ]
-                                }
-                           )
+                     --                        |> (\query ->
+                     --                                { query
+                     --                                    | whereClause =
+                     --                                        Parse.and
+                     --                                            [ Parse.equalTo "year" (Encode.int year)
+                     --                                            , Parse.equalTo "month" (Encode.int month)
+                     --                                            ]
+                     --                                }
+                     --                           )
                     )
                 )
     in
@@ -214,42 +214,20 @@ view lift ({ today } as viewConfig) model =
                         in
                         ( stateSort, createdAtSort )
                     )
-
-        dailyBullets =
-            sortedBullets
-                |> List.filter ((/=) Nothing << .dayOfMonth)
-
-        monthlyBullets =
-            sortedBullets
-                |> List.filter ((==) Nothing << .dayOfMonth)
-
-        ( year, month, dayOfMonth ) =
-            Calendar.toGregorian today
-
-        dailyTitle =
-            String.join " "
-                [ case Calendar.defaultTimeLocale of
-                    Calendar.TimeLocale { months } ->
-                        List.drop (month - 1) months
-                            |> List.head
-                            |> Maybe.map Tuple.first
-                            |> Maybe.withDefault ""
-                , toString dayOfMonth
-                ]
-
-        monthlyTitle =
-            String.join " "
-                [ case Calendar.defaultTimeLocale of
-                    Calendar.TimeLocale { months } ->
-                        List.drop (month - 1) months
-                            |> List.head
-                            |> Maybe.map Tuple.first
-                            |> Maybe.withDefault ""
-                ]
     in
     Html.div
         [ Html.class "start"
         ]
+        [ inputCard lift viewConfig model
+        , dailyBulletsCard lift viewConfig model sortedBullets
+        , monthlyBulletsCard lift viewConfig model sortedBullets
+        , upcomingEventsCard lift viewConfig model sortedBullets
+        , backlogCard lift viewConfig model sortedBullets
+        ]
+
+
+inputCard lift viewConfig model =
+    Html.div []
         [ Card.view
             [ cs "start__input-card" ]
             [ TextField.view (lift << Mdc)
@@ -303,24 +281,163 @@ view lift ({ today } as viewConfig) model =
                     Chip.view (lift << Mdc) "my-chip" model.mdc [] [ text bullet.text ]
                 ]
             )
-        , Card.view
-            [ cs "start__daily-bullets"
-            ]
-            [ Html.h3
-                [ Html.class "start__daily-bullets__title" ]
-                [ text dailyTitle ]
-            , Lists.ul []
-                (List.map (viewBullet lift viewConfig model) dailyBullets)
-            ]
-        , Card.view
-            [ cs "start__monthly-bullets"
-            ]
-            [ Html.h3
-                [ Html.class "start__daily-bullets__title" ]
-                [ text monthlyTitle ]
-            , Lists.ul []
-                (List.map (viewBullet lift viewConfig model) monthlyBullets)
-            ]
+        ]
+
+
+dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
+    let
+        bullets =
+            sortedBullets
+                |> List.filter
+                    (\bullet ->
+                        (bullet.year == Just year)
+                            && (bullet.month == Just month)
+                            && (bullet.dayOfMonth == Just dayOfMonth)
+                    )
+
+        title =
+            String.join " "
+                [ case Calendar.defaultTimeLocale of
+                    Calendar.TimeLocale { months } ->
+                        List.drop (month - 1) months
+                            |> List.head
+                            |> Maybe.map Tuple.first
+                            |> Maybe.withDefault ""
+                , toString dayOfMonth
+                ]
+
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian today
+    in
+    Card.view
+        [ cs "start__daily-bullets"
+        ]
+        [ Html.h3
+            [ Html.class "start__daily-bullets__title" ]
+            [ text title ]
+        , Lists.ul []
+            (List.map (viewBullet lift viewConfig model) bullets)
+        ]
+
+
+monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
+    let
+        bullets =
+            sortedBullets
+                |> List.filter
+                    (\bullet ->
+                        (bullet.year == Just year)
+                            && (bullet.month == Just month)
+                            && (Maybe.withDefault 0 bullet.dayOfMonth > dayOfMonth)
+                    )
+
+        title =
+            String.join " "
+                [ case Calendar.defaultTimeLocale of
+                    Calendar.TimeLocale { months } ->
+                        List.drop (month - 1) months
+                            |> List.head
+                            |> Maybe.map Tuple.first
+                            |> Maybe.withDefault ""
+                ]
+
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian today
+    in
+    Card.view
+        [ cs "start__monthly-bullets"
+        ]
+        [ Html.h3
+            [ Html.class "start__daily-bullets__title" ]
+            [ text title ]
+        , Lists.ul []
+            (List.map (viewBullet lift viewConfig model) bullets)
+        ]
+
+
+upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
+    let
+        bullets =
+            sortedBullets
+                |> List.filter
+                    (\bullet ->
+                        List.all identity
+                            [ bullet.state == Bullet.Event
+                            , Maybe.withDefault 0 bullet.year >= year
+                            , Maybe.withDefault 0 bullet.month >= month
+                            , Maybe.withDefault 0 bullet.dayOfMonth > dayOfMonth
+                            ]
+                    )
+
+        title =
+            "Upcoming events"
+
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian today
+    in
+    Card.view
+        [ cs "start__monthly-bullets"
+        ]
+        [ Html.h3
+            [ Html.class "start__daily-bullets__title" ]
+            [ text title ]
+        , Lists.ul []
+            (List.map (viewBullet lift viewConfig model) bullets)
+        ]
+
+
+backlogCard lift ({ today } as viewConfig) model sortedBullets =
+    let
+        bullets =
+            sortedBullets
+                |> List.filter
+                    (\bullet ->
+                        List.all identity
+                            [ bullet.state == Bullet.Task Bullet.Unchecked
+                            , ( Maybe.withDefault 0 bullet.year
+                              , Maybe.withDefault 0 bullet.month
+                              , Maybe.withDefault 0 bullet.dayOfMonth
+                              )
+                                < ( year, month, dayOfMonth )
+                            ]
+                    )
+
+        title =
+            "Backlog"
+
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian today
+    in
+    Card.view
+        [ cs "start__monthly-bullets"
+        ]
+        [ Html.h3
+            [ Html.class "start__daily-bullets__title" ]
+            [ text title ]
+        , Lists.ul []
+            (List.map (viewBullet lift viewConfig model) bullets)
+        ]
+
+
+bulletClass : Parse.Object Bullet -> String
+bulletClass bullet =
+    String.join " "
+        [ "bullet"
+        , case bullet.state of
+            Bullet.Event ->
+                "bullet--event"
+
+            Bullet.Note ->
+                "bullet--note"
+
+            Bullet.Task Bullet.Unchecked ->
+                "bullet--task bullet--task--unchecked"
+
+            Bullet.Task Bullet.Checked ->
+                "bullet--task bullet--task--checked"
+
+            Bullet.Task Bullet.Migrated ->
+                "bullet--task bullet--task--migrated"
         ]
 
 
@@ -332,29 +449,22 @@ viewBullet :
     -> Html msg
 viewBullet lift viewConfig model bullet =
     let
-        stateModifier =
-            case bullet.state of
-                Bullet.Event ->
-                    "bullet--event"
+        date =
+            case ( bullet.year, bullet.month, bullet.dayOfMonth ) of
+                ( Just year, Just month, Just day ) ->
+                    Just (toString day ++ ". " ++ toString month ++ " " ++ toString year)
 
-                Bullet.Note ->
-                    "bullet--note"
-
-                Bullet.Task Bullet.Unchecked ->
-                    "bullet--task bullet--task--unchecked"
-
-                Bullet.Task Bullet.Checked ->
-                    "bullet--task bullet--task--checked"
-
-                Bullet.Task Bullet.Migrated ->
-                    "bullet--task bullet--task--migrated"
+                _ ->
+                    Nothing
     in
     Lists.li
-        [ cs ("bullet " ++ stateModifier)
+        [ cs (bulletClass bullet)
         , Options.onClick (lift (BulletClicked bullet))
         ]
         [ Lists.graphicIcon [] ""
         , Lists.text []
             [ text bullet.text
+            , Lists.secondaryText []
+                [ text (Maybe.withDefault "–" date) ]
             ]
         ]
