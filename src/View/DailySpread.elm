@@ -99,16 +99,7 @@ update lift viewConfig msg model =
             ( { model | bullets = bullets }, Cmd.none )
 
         NewBulletClicked ->
-            ( model
-            , model.dailySpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet "daily-spread" "DailySpread" spreadId Nothing
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
 
         EditClicked ->
             ( model
@@ -120,17 +111,7 @@ update lift viewConfig msg model =
 
         BulletClicked bulletId ->
             ( model
-            , model.dailySpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet "daily-spread"
-                            "DailySpread"
-                            spreadId
-                            (Just bulletId)
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
+            , Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId)))
             )
 
         BackClicked ->

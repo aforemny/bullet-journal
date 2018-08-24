@@ -93,7 +93,7 @@ update :
     -> Model msg
     -> ( Model msg, Cmd msg )
 update lift { today, parse } msg model =
-    case Debug.log "Msg" msg of
+    case msg of
         BulletCreated (Err err) ->
             -- TODO:
             let
@@ -147,24 +147,28 @@ update lift { today, parse } msg model =
             ( { model | bullets = bullets }, Cmd.none )
 
         BulletClicked bullet ->
-            case bullet.state of
-                Bullet.Task Bullet.Unchecked ->
-                    ( model
-                    , Task.attempt (lift << BulletMarkedDone)
-                        (Bullet.update parse
-                            bullet.objectId
-                            (Bullet.fromParseObject bullet
-                                |> (\bullet ->
-                                        { bullet | state = Bullet.Task Bullet.Checked }
-                                   )
-                            )
-                            |> Task.map (always bullet.objectId)
-                        )
-                    )
+            ( model
+            , Navigation.newUrl (Url.toString (Url.EditBullet (Just bullet.objectId)))
+            )
 
-                _ ->
-                    ( model, Cmd.none )
-
+        --        BulletClicked bullet ->
+        --            case bullet.state of
+        --                Bullet.Task Bullet.Unchecked ->
+        --                    ( model
+        --                    , Task.attempt (lift << BulletMarkedDone)
+        --                        (Bullet.update parse
+        --                            bullet.objectId
+        --                            (Bullet.fromParseObject bullet
+        --                                |> (\bullet ->
+        --                                        { bullet | state = Bullet.Task Bullet.Checked }
+        --                                   )
+        --                            )
+        --                            |> Task.map (always bullet.objectId)
+        --                        )
+        --                    )
+        --
+        --                _ ->
+        --                    ( model, Cmd.none )
         BulletsChanged (Err err) ->
             -- TODO:
             let

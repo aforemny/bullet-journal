@@ -1,42 +1,67 @@
 .edit-bullet {
-  &__spread-wrapper,
-  &__tipe-wrapper,
-  &__task-state-wrapper,
-  &__text-wrapper {
-    margin-top: 20px;
-    margin-bottom: 20px;
+  flex: 1 1 auto;
+}
+
+.edit-bullet__back-icon {
+  margin: 1rem 1rem 3rem 0rem;
+}
+
+.edit-bullet__wrapper {
+  display: flex;
+  flex-flow: column;
+  align-items: stretch;
+  width: 100%;
+}
+
+.edit-bullet__wrapper + .edit-bullet__wrapper {
+  margin-top: 12rem;
+}
+
+.edit-bullet__form-wrapper {
+  display: flex;
+  flex-flow: column;
+}
+
+.edit-bullet__tipe-wrapper,
+.edit-bullet__date-wrapper,
+.edit-bullet__buttons-wrapper {
+  display: flex;
+  flex-flow: row;
+
+  & > * {
+    display: flex;
+    flex: 1 0 auto;
+    margin-right: 2rem;
   }
 
-  &__buttons-wrapper {
-    margin-top: 20px;
-
-    .mdc-button {
-      margin-right: 24px;
-    }
-
-    .mdc-button:last-child {
-      margin-right: 0;
-    }
+  & > *:last-child {
+    margin-right: 0;
   }
+}
 
-  &__task-state-wrapper {
-    display: none;
+.edit-bullet__buttons-wrapper {
+  margin-top: 2rem;
+}
+
+.edit-bullet__headline {
+  margin-top: 4rem;
+}
+
+.edit-bullet__task-state-wrapper {
+  display: none;
+}
+
+.edit-bullet--tipe-task .edit-bullet__task-state-wrapper {
+  display: block;
+}
+
+.edit-bullet__text-wrapper {
+  .mdc-text-field {
   }
+}
 
-  &--tipe-task &__task-state-wrapper {
-    display: block;
-  }
-
-  &__text-wrapper {
-    .mdc-text-field {
-      width: 640px;
-      max-width: 100%;
-      margin-top: 0 !important;
-      margin-bottom: 0;
-    }
-  }
-
-  &__wrapper + &__wrapper {
-    margin-top: 96px;
+.edit-bullet__date-wrapper {
+  .mdc-text-field {
+    width: 72px;
   }
 }

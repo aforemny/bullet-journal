@@ -1,14 +1,14 @@
 module View.EditBullet exposing (..)
 
 import Date exposing (Date)
-import Html.Attributes as Html
 import Html exposing (Html, text)
+import Html.Attributes as Html
 import Material
 import Material.Button as Button
 import Material.Checkbox as Checkbox
 import Material.Dialog as Dialog
 import Material.Icon as Icon
-import Material.Options as Options exposing (styled, cs, css, when)
+import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Select as Select
 import Material.Textfield as TextField
 import Material.Toolbar as Toolbar
@@ -25,13 +25,15 @@ import View
 type alias Model msg =
     { mdc : Material.Model msg
     , referringUrl : Url
-    , spreadClass : String
-    , spreadId : Parse.ObjectId Bullet.Any
     , bulletId : Maybe (Parse.ObjectId Bullet)
     , bullet : Maybe (Parse.Object Bullet)
+    , spreadId : Maybe (Parse.ObjectId Bullet.Any)
     , tipe : Tipe
     , taskState : Bullet.TaskState
     , text : String
+    , year : String
+    , month : String
+    , dayOfMonth : String
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
     }
@@ -45,21 +47,21 @@ type Tipe
 
 defaultModel :
     Url
-    -> String
-    -> Parse.ObjectId Bullet.Any
     -> Maybe (Parse.ObjectId Bullet)
     -> Model msg
-defaultModel referringUrl spreadClass spreadId bulletId =
+defaultModel referringUrl bulletId =
     { mdc = Material.defaultModel
     , referringUrl = referringUrl
-    , spreadClass = spreadClass
-    , spreadId = spreadId
     , bulletId = bulletId
     , bullet = Nothing
+    , spreadId = Nothing
     , tipe = Note
     , taskState = Bullet.Unchecked
     , text = ""
     , error = Nothing
+    , year = ""
+    , month = ""
+    , dayOfMonth = ""
     , showConfirmDeleteDialog = False
     }
 
@@ -67,7 +69,7 @@ defaultModel referringUrl spreadClass spreadId bulletId =
 type Msg msg
     = Mdc (Material.Msg msg)
     | BulletResult (Result Parse.Error (Parse.Object Bullet))
-    | SpreadChanged (Parse.ObjectId Bullet.Any)
+    | SpreadChanged (Maybe (Parse.ObjectId Bullet.Any))
     | TipeChanged Tipe
     | TaskStateChanged Bullet.TaskState
     | TextChanged String
@@ -81,19 +83,20 @@ type Msg msg
     | CancelDeleteClicked
     | ConfirmDeleteClicked
     | DeleteResult (Result Parse.Error {})
+    | DayOfMonthChanged String
+    | MonthChanged String
+    | YearChanged String
 
 
 init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Url
-    -> String
-    -> Parse.ObjectId Bullet.Any
     -> Maybe (Parse.ObjectId Bullet)
     -> Maybe (Model msg)
     -> ( Model msg, Cmd msg )
-init lift viewConfig referringUrl spreadClass spreadId bulletId model =
-    ( defaultModel referringUrl spreadClass spreadId bulletId
+init lift viewConfig referringUrl bulletId model =
+    ( defaultModel referringUrl bulletId
     , Cmd.batch
         [ Material.init (lift << Mdc)
         , bulletId
@@ -119,6 +122,15 @@ update lift viewConfig msg model =
     case msg of
         Mdc msg_ ->
             Material.update (lift << Mdc) msg_ model
+
+        DayOfMonthChanged dayOfMonth ->
+            ( { model | dayOfMonth = dayOfMonth }, Cmd.none )
+
+        MonthChanged month ->
+            ( { model | month = month }, Cmd.none )
+
+        YearChanged year ->
+            ( { model | year = year }, Cmd.none )
 
         SpreadChanged spreadId ->
             ( { model | spreadId = spreadId }, Cmd.none )
@@ -151,27 +163,27 @@ update lift viewConfig msg model =
                             Bullet.Note
 
                 bullet =
-                    { spreadClass = Just model.spreadClass
-                    , spreadId = Just model.spreadId
+                    { spreadClass = Nothing
+                    , spreadId = model.spreadId
                     , state = state
                     , text = model.text
-                    , year = Nothing
-                    , month = Nothing
-                    , dayOfMonth = Nothing
+                    , year = Result.toMaybe (String.toInt model.year)
+                    , month = Result.toMaybe (String.toInt model.month)
+                    , dayOfMonth = Result.toMaybe (String.toInt model.dayOfMonth)
                     }
             in
-                ( model
-                , model.bulletId
-                    |> Maybe.map
-                        (\bulletId ->
-                            Task.attempt (lift << UpdateResult)
-                                (Bullet.update viewConfig.parse bulletId bullet)
-                        )
-                    |> Maybe.withDefault
-                        (Task.attempt (lift << CreateResult)
-                            (Bullet.create viewConfig.parse bullet)
-                        )
-                )
+            ( model
+            , model.bulletId
+                |> Maybe.map
+                    (\bulletId ->
+                        Task.attempt (lift << UpdateResult)
+                            (Bullet.update viewConfig.parse bulletId bullet)
+                    )
+                |> Maybe.withDefault
+                    (Task.attempt (lift << CreateResult)
+                        (Bullet.create viewConfig.parse bullet)
+                    )
+            )
 
         UpdateResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
@@ -243,6 +255,9 @@ update lift viewConfig msg model =
                         Bullet.Task taskState ->
                             taskState
                 , text = bullet.text
+                , year = Maybe.withDefault "" (Maybe.map toString bullet.year)
+                , month = Maybe.withDefault "" (Maybe.map toString bullet.month)
+                , dayOfMonth = Maybe.withDefault "" (Maybe.map toString bullet.dayOfMonth)
               }
             , Cmd.none
             )
@@ -262,38 +277,50 @@ view lift viewConfig model =
             Note ->
                 Html.class "edit-bullet--tipe-note"
         ]
-        [ viewConfig.toolbar
-            { title =
-                if model.bulletId /= Nothing then
-                    "Edit bullet"
-                else
-                    "New bullet"
-            , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    , Options.onClick (lift BackClicked)
-                    ]
-                    "arrow_back"
-            , additionalSections = []
-            }
+        [ Icon.view
+            [ cs "edit-bullet__back-icon"
+            , Options.onClick (lift BackClicked)
+            ]
+            "arrow_back"
         , Html.div
             [ Html.class "edit-bullet__wrapper"
             ]
-            [ Html.div
-                [ Html.class "edit-bullet__spread-wrapper"
+            [ bulletForm lift model
+            , bulletDelete lift model
+            ]
+        ]
+
+
+
+--          viewConfig.toolbar
+--            { title =
+--                if model.bulletId /= Nothing then
+--                    "Edit bullet"
+--                else
+--                    "New bullet"
+--            , menuIcon =
+--                Icon.view
+--                    [ Toolbar.menuIcon
+--                    , Options.onClick (lift BackClicked)
+--                    ]
+--                    "arrow_back"
+--            , additionalSections = []
+--            }
+
+
+bulletForm lift model =
+    let
+        formButtons =
+            Html.div
+                [ Html.class "edit-bullet__buttons-wrapper" ]
+                [ saveButton
+
+                -- , cancelButton
                 ]
-                [ TextField.view (lift << Mdc)
-                    "edit-bullet__spread"
-                    model.mdc
-                    [ TextField.label "Spread"
-                    , TextField.value (ObjectId.toString model.spreadId)
-                    , TextField.disabled
-                    ]
-                    []
-                ]
-            , Html.div
-                [ Html.class "edit-bullet__tipe-wrapper"
-                ]
+
+        bulletTipe =
+            Html.div
+                [ Html.class "edit-bullet__tipe-wrapper" ]
                 [ Select.view (lift << Mdc)
                     "edit-bullet__tipe"
                     model.mdc
@@ -333,146 +360,232 @@ view lift viewConfig model =
                         [ text "Note"
                         ]
                     ]
-                ]
-            , Html.div
-                [ Html.class "edit-bullet__text-wrapper"
-                ]
-                [ TextField.view (lift << Mdc)
-                    "edit-bullet__text"
-                    model.mdc
-                    [ TextField.label "Text"
-                    , TextField.value model.text
-                    , Options.onInput (lift << TextChanged)
+                , Html.div
+                    [ Html.class "edit-bullet__task-state-wrapper"
                     ]
-                    []
-                ]
-            , Html.div
-                [ Html.class "edit-bullet__task-state-wrapper"
-                ]
-                [ Select.view (lift << Mdc)
-                    "edit-bullet__task-state"
-                    model.mdc
-                    [ Select.label "Type"
-                    , Select.preselected
-                    , Options.onChange
-                        (\value ->
-                            lift <|
-                                TaskStateChanged <|
-                                    case value of
-                                        "checked" ->
-                                            Bullet.Checked
+                    [ Select.view (lift << Mdc)
+                        "edit-bullet__task-state"
+                        model.mdc
+                        [ Select.label "Type"
+                        , Select.preselected
+                        , Options.onChange
+                            (\value ->
+                                lift <|
+                                    TaskStateChanged <|
+                                        case value of
+                                            "checked" ->
+                                                Bullet.Checked
 
-                                        "unchecked" ->
-                                            Bullet.Unchecked
+                                            "unchecked" ->
+                                                Bullet.Unchecked
 
-                                        _ ->
-                                            Bullet.Migrated
-                        )
-                    ]
-                    [ Select.option
-                        [ Select.value "unchecked"
-                        , when (model.taskState == Bullet.Unchecked) Select.selected
+                                            _ ->
+                                                Bullet.Migrated
+                            )
                         ]
-                        [ text "Unchecked"
-                        ]
-                    , Select.option
-                        [ Select.value "checked"
-                        , when (model.taskState == Bullet.Checked) Select.selected
-                        ]
-                        [ text "Checked"
-                        ]
-                    , Select.option
-                        [ Select.value "migrated"
-                        , when (model.taskState == Bullet.Migrated) Select.selected
-                        ]
-                        [ text "Migrated"
+                        [ Select.option
+                            [ Select.value "unchecked"
+                            , when (model.taskState == Bullet.Unchecked) Select.selected
+                            ]
+                            [ text "Unchecked"
+                            ]
+                        , Select.option
+                            [ Select.value "checked"
+                            , when (model.taskState == Bullet.Checked) Select.selected
+                            ]
+                            [ text "Checked"
+                            ]
+                        , Select.option
+                            [ Select.value "migrated"
+                            , when (model.taskState == Bullet.Migrated) Select.selected
+                            ]
+                            [ text "Migrated"
+                            ]
                         ]
                     ]
                 ]
-            , Html.div
-                [ Html.class "edit-bullet__buttons-wrapper"
-                ]
-                [ Button.view (lift << Mdc)
-                    "edit-bullet__save-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.raised
-                    , Button.onClick (lift SaveClicked)
-                    ]
-                    [ text "Save" ]
-                , Button.view (lift << Mdc)
-                    "edit-bullet__cancel-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.onClick (lift CancelClicked)
-                    ]
-                    [ text "Cancel" ]
-                ]
-            ]
-        , if model.bulletId /= Nothing then
+
+        bulletText =
             Html.div
-                [ Html.class "edit-bullet__wrapper"
-                ]
-                [ Html.h2
+                [ Html.class "edit-bullet__text" ]
+                [ Html.div
                     [ Html.class "edit-bullet__headline" ]
-                    [ text "Delete"
+                    [ text "Text"
                     ]
                 , Html.div
-                    [ Html.class "edit-bullet__delete-wrapper"
-                    ]
-                    [ Button.view (lift << Mdc)
-                        "edit-bullet__delete"
+                    [ Html.class "edit-bullet__text-wrapper" ]
+                    [ TextField.view (lift << Mdc)
+                        "edit-bullet__text"
                         model.mdc
-                        [ Button.raised
-                        , Button.ripple
-                        , Button.onClick (lift DeleteClicked)
+                        [ TextField.fullwidth
+                        , TextField.value model.text
+                        , Options.onInput (lift << TextChanged)
                         ]
-                        [ text "Delete"
-                        ]
-                    ]
-                , Dialog.view (lift << Mdc)
-                    "edit-bullet__confirm-delete"
-                    model.mdc
-                    [ when model.showConfirmDeleteDialog Dialog.open
-                    , Dialog.onClose (lift ConfirmDeleteDialogClosed)
-                    ]
-                    [ Dialog.surface []
-                        [ Dialog.header []
-                            [ styled Html.h3
-                                [ Dialog.title
-                                ]
-                                [ text "Confirm to delete"
-                                ]
-                            ]
-                        , Dialog.body []
-                            [ text """
-Do you really want to delete this bullet?"
-                          """
-                            ]
-                        , Dialog.footer []
-                            [ Button.view (lift << Mdc)
-                                "edit-bullet__confirm-delete__cancel"
-                                model.mdc
-                                [ Button.ripple
-                                , Dialog.cancel
-                                , Button.onClick (lift CancelDeleteClicked)
-                                ]
-                                [ text "No"
-                                ]
-                            , Button.view (lift << Mdc)
-                                "edit-bullet__confirm-delete__accept"
-                                model.mdc
-                                [ Button.ripple
-                                , Dialog.accept
-                                , Button.onClick (lift ConfirmDeleteClicked)
-                                ]
-                                [ text "Yes"
-                                ]
-                            ]
-                        ]
-                    , Dialog.backdrop [] []
+                        []
                     ]
                 ]
-          else
-            text ""
+
+        bulletSpread =
+            Html.div
+                [ Html.class "edit-bullet__spread" ]
+                [ Html.div
+                    [ Html.class "edit-bullet__headline" ]
+                    [ text "Spread" ]
+                , Html.div
+                    [ Html.class "edit-bullet__spread-wrapper" ]
+                    [ TextField.view (lift << Mdc)
+                        "edit-bullet__spread"
+                        model.mdc
+                        [ TextField.label "Spread"
+                        , TextField.value (Maybe.withDefault "" (Maybe.map ObjectId.toString model.spreadId))
+                        , TextField.disabled
+                        ]
+                        []
+                    ]
+                ]
+
+        bulletDate =
+            Html.div
+                [ Html.class "edit-bullet__bullet-date" ]
+                [ Html.div
+                    [ Html.class "edit-bullet__headline" ]
+                    [ text "Date" ]
+                , Html.div
+                    [ Html.class "edit-bullet__date-wrapper" ]
+                    [ bulletDayOfMonth
+                    , bulletMonth
+                    , bulletYear
+                    ]
+                ]
+
+        bulletDayOfMonth =
+            TextField.view (lift << Mdc)
+                "edit-bullet__day-of-month"
+                model.mdc
+                [ TextField.label "DayOfMonth"
+                , TextField.value model.dayOfMonth
+                , Options.onInput (lift << DayOfMonthChanged)
+                ]
+                []
+
+        bulletMonth =
+            TextField.view (lift << Mdc)
+                "edit-bullet__month"
+                model.mdc
+                [ TextField.label "Month"
+                , TextField.value model.month
+                , Options.onInput (lift << MonthChanged)
+                ]
+                []
+
+        bulletYear =
+            TextField.view (lift << Mdc)
+                "edit-bullet__year"
+                model.mdc
+                [ TextField.label "Year"
+                , TextField.value model.year
+                , Options.onInput (lift << YearChanged)
+                ]
+                []
+
+        saveButton =
+            Button.view (lift << Mdc)
+                "edit-bullet__save-button"
+                model.mdc
+                [ Button.ripple
+                , Button.raised
+                , Button.onClick (lift SaveClicked)
+                ]
+                [ text "Save" ]
+
+        cancelButton =
+            Button.view (lift << Mdc)
+                "edit-bullet__cancel-button"
+                model.mdc
+                [ Button.ripple
+                , Button.onClick (lift CancelClicked)
+                ]
+                [ text "Cancel" ]
+    in
+    Html.div
+        [ Html.class "edit-bullet__form-wrapper"
+        ]
+        [ bulletTipe
+        , bulletText
+        , bulletDate
+        , bulletSpread
+        , formButtons
+        ]
+
+
+bulletDelete lift model =
+    if model.bulletId /= Nothing then
+        deleteBullet lift model
+    else
+        text ""
+
+
+deleteBullet lift model =
+    Html.div
+        [ Html.class "edit-bullet__wrapper"
+        ]
+        [ Html.h2
+            [ Html.class "edit-bullet__headline" ]
+            [ text "Delete"
+            ]
+        , Html.div
+            [ Html.class "edit-bullet__delete-wrapper"
+            ]
+            [ Button.view (lift << Mdc)
+                "edit-bullet__delete"
+                model.mdc
+                [ Button.raised
+                , Button.ripple
+                , Button.onClick (lift DeleteClicked)
+                ]
+                [ text "Delete"
+                ]
+            ]
+        , Dialog.view (lift << Mdc)
+            "edit-bullet__confirm-delete"
+            model.mdc
+            [ when model.showConfirmDeleteDialog Dialog.open
+            , Dialog.onClose (lift ConfirmDeleteDialogClosed)
+            ]
+            [ Dialog.surface []
+                [ Dialog.header []
+                    [ styled Html.h3
+                        [ Dialog.title
+                        ]
+                        [ text "Confirm to delete"
+                        ]
+                    ]
+                , Dialog.body []
+                    [ text """
+    Do you really want to delete this bullet?"
+                              """
+                    ]
+                , Dialog.footer []
+                    [ Button.view (lift << Mdc)
+                        "edit-bullet__confirm-delete__cancel"
+                        model.mdc
+                        [ Button.ripple
+                        , Dialog.cancel
+                        , Button.onClick (lift CancelDeleteClicked)
+                        ]
+                        [ text "No"
+                        ]
+                    , Button.view (lift << Mdc)
+                        "edit-bullet__confirm-delete__accept"
+                        model.mdc
+                        [ Button.ripple
+                        , Dialog.accept
+                        , Button.onClick (lift ConfirmDeleteClicked)
+                        ]
+                        [ text "Yes"
+                        ]
+                    ]
+                ]
+            , Dialog.backdrop [] []
+            ]
         ]

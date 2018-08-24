@@ -88,11 +88,11 @@ type Msg
     | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
     | DailySpreadMsg (View.DailySpread.Msg Msg)
     | IndexMsg (View.Index.Msg Msg)
+    | StartMsg (View.Start.Msg Msg)
     | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
     | EditCollectionSpreadMsg (View.EditCollectionSpread.Msg Msg)
     | EditDailySpreadMsg (View.EditDailySpread.Msg Msg)
     | EditMonthlySpreadMsg (View.EditMonthlySpread.Msg Msg)
-    | StartMsg (View.Start.Msg Msg)
     | TodayClicked
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | MonthClicked
@@ -130,14 +130,10 @@ init flags location =
                 , now = Ports.readDateUnsafe flags.now
                 , url = url
             }
-
-        ( start, startCmd ) =
-          View.Start.init StartMsg viewConfig model.start
     in
-    ( { model | start = start }
+    ( model
     , Cmd.batch
         [ Material.init Mdc
-        , startCmd
         ]
     )
         |> initView viewConfig url
@@ -166,12 +162,13 @@ subscriptions model =
 initView : View.Config Msg -> Url -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 initView viewConfig url ( model, cmd ) =
     (case url of
+        Url.Start ->
+            View.Start.init StartMsg viewConfig model.start
+                |> Tuple.mapFirst (\start -> { model | start = start })
+
         Url.Index ->
             View.Index.init IndexMsg viewConfig model.index
-                |> Tuple.mapFirst
-                    (\index ->
-                        { model | index = index }
-                    )
+                |> Tuple.mapFirst (\index -> { model | index = index })
 
         Url.MonthlySpread objectId ->
             View.MonthlySpread.init MonthlySpreadMsg
@@ -235,21 +232,12 @@ initView viewConfig url ( model, cmd ) =
                         { model | editCollectionSpread = editCollectionSpread }
                     )
 
-        Url.EditBullet route className spreadId bulletId ->
+        Url.EditBullet bulletId ->
             View.EditBullet.init EditBulletMsg
                 viewConfig
-                (case className of
-                    "CollectionSpread" ->
-                        Url.CollectionSpread (Bullet.castObjectId spreadId)
-
-                    "MonthlySpread" ->
-                        Url.MonthlySpread (Bullet.castObjectId spreadId)
-
-                    _ ->
-                        Url.DailySpread (Bullet.castObjectId spreadId)
+                (-- TODO:
+                 Url.Start
                 )
-                className
-                spreadId
                 bulletId
                 model.editBullet
                 |> Tuple.mapFirst
@@ -348,7 +336,7 @@ update msg model =
 
         BackClicked ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Navigation.newUrl (Url.toString Url.Start)
             )
 
         TodayClicked ->
@@ -469,8 +457,11 @@ view model =
         , Toolbar.fixedAdjust "toolbar" model.mdc
         ]
         [ case model.url of
-            Url.Index ->
+            Url.Start ->
                 viewStart viewConfig model
+
+            Url.Index ->
+                viewIndex viewConfig model
 
             Url.MonthlySpread objectId ->
                 viewMonthlySpread viewConfig model
@@ -493,7 +484,7 @@ view model =
             Url.NotFound urlString ->
                 viewNotFound viewConfig urlString model
 
-            Url.EditBullet route className objectId bulletId ->
+            Url.EditBullet _ ->
                 viewEditBullet viewConfig model
         ]
 

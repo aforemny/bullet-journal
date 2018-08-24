@@ -112,16 +112,7 @@ update lift viewConfig msg model =
             ( { model | bullets = bullets }, Cmd.none )
 
         NewBulletClicked ->
-            ( model
-            , model.monthlySpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet "monthly-spread" "MonthlySpread" spreadId Nothing
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
 
         EditClicked ->
             ( model
@@ -180,20 +171,7 @@ update lift viewConfig msg model =
             )
 
         BulletClicked bulletId ->
-            ( model
-            , model.monthlySpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet
-                            "monthly-spread"
-                            "MonthlySpread"
-                            spreadId
-                            (Just bulletId)
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId))) )
 
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
@@ -261,44 +239,43 @@ view lift viewConfig model =
                 ]
             , Html.div
                 [ Html.class "monthly-spread__content-wrapper" ]
-                [
-              Html.ol
-                [ Html.class "monthly-spread__days-wrapper"
-                ]
-                (monthlySpread
-                    |> Maybe.map
-                        (\monthlySpread ->
-                            List.map
-                                (\dayOfMonth ->
-                                    dayView lift monthlySpread dayOfMonth model
-                                )
-                                (List.range 1
-                                    (Calendar.monthLength
-                                        (Calendar.isLeapYear monthlySpread.year)
-                                        monthlySpread.month
+                [ Html.ol
+                    [ Html.class "monthly-spread__days-wrapper"
+                    ]
+                    (monthlySpread
+                        |> Maybe.map
+                            (\monthlySpread ->
+                                List.map
+                                    (\dayOfMonth ->
+                                        dayView lift monthlySpread dayOfMonth model
                                     )
-                                )
-                        )
-                    |> Maybe.withDefault [ text "" ]
-                )
-            , Lists.ol
-                [ cs "monthly-spread__bullets-wrapper"
-                ]
-                (List.map
-                    (\bullet ->
-                        Bullet.view
-                            { additionalOptions =
-                                [ cs "monthly-spread__bullet"
-                                , Options.onClick
-                                    (lift (BulletClicked bullet.objectId))
-                                ]
-                            }
-                            (Bullet.fromParseObject bullet)
+                                    (List.range 1
+                                        (Calendar.monthLength
+                                            (Calendar.isLeapYear monthlySpread.year)
+                                            monthlySpread.month
+                                        )
+                                    )
+                            )
+                        |> Maybe.withDefault [ text "" ]
                     )
-                    bullets
-                )
+                , Lists.ol
+                    [ cs "monthly-spread__bullets-wrapper"
+                    ]
+                    (List.map
+                        (\bullet ->
+                            Bullet.view
+                                { additionalOptions =
+                                    [ cs "monthly-spread__bullet"
+                                    , Options.onClick
+                                        (lift (BulletClicked bullet.objectId))
+                                    ]
+                                }
+                                (Bullet.fromParseObject bullet)
+                        )
+                        bullets
+                    )
+                ]
             ]
-        ]
         ]
 
 

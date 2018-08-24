@@ -95,16 +95,7 @@ update lift viewConfig msg model =
             ( { model | collectionSpread = Just collectionSpread }, Cmd.none )
 
         NewBulletClicked ->
-            ( model
-            , model.collectionSpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet "collection-spread" "CollectionSpread" spreadId Nothing
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
 
         EditClicked ->
             ( model
@@ -115,19 +106,7 @@ update lift viewConfig msg model =
             )
 
         BulletClicked bulletId ->
-            ( model
-            , model.collectionSpread
-                |> Maybe.map (.objectId >> Bullet.anyObjectId)
-                |> Maybe.map
-                    (\spreadId ->
-                        Url.EditBullet "collection-spread"
-                            "CollectionSpread"
-                            spreadId
-                            (Just bulletId)
-                    )
-                |> Maybe.map (Navigation.newUrl << Url.toString)
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId))) )
 
         BackClicked ->
             ( model
