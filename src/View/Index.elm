@@ -1,6 +1,6 @@
-module View.Index exposing (..)
+module View.Index exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
 
-import Date exposing (Date)
+import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes as Html
 import Material
@@ -12,15 +12,15 @@ import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
+import Route
 import Task exposing (Task)
+import Time
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import Url
 import View
 
 
@@ -127,18 +127,20 @@ update lift viewConfig msg model =
 
         MonthlySpreadClicked monthlySpread ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.MonthlySpread monthlySpread.objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.MonthlySpread monthlySpread.objectId))
             )
 
         DailySpreadClicked dailySpread ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.DailySpread dailySpread.objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.DailySpread dailySpread.objectId))
             )
 
         CollectionSpreadClicked collectionSpread ->
             ( model
-            , Navigation.newUrl
-                (Url.toString (Url.CollectionSpread collectionSpread.objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.CollectionSpread collectionSpread.objectId))
             )
 
         NewMonthlySpreadClicked ->
@@ -159,7 +161,8 @@ update lift viewConfig msg model =
 
         NewMonthlySpreadClickedResult (Ok objectId) ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.MonthlySpread objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.MonthlySpread objectId))
             )
 
         NewDailySpreadClicked ->
@@ -180,7 +183,8 @@ update lift viewConfig msg model =
 
         NewDailySpreadClickedResult (Ok objectId) ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.DailySpread objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.DailySpread objectId))
             )
 
         NewCollectionSpreadClicked ->
@@ -198,8 +202,8 @@ update lift viewConfig msg model =
 
         NewCollectionSpreadClickedResult (Ok objectId) ->
             ( model
-            , Navigation.newUrl
-                (Url.toString (Url.CollectionSpread objectId))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.CollectionSpread objectId))
             )
 
 
@@ -248,7 +252,7 @@ view lift viewConfig model =
                         collectionSpread =
                             CollectionSpread.fromParseObject collectionSpread_
                     in
-                    ( CollectionSpread.canonicalDate collectionSpread
+                    ( CollectionSpread.canonicalDate viewConfig.timeZone collectionSpread
                     , Lists.li
                         [ Options.onClick
                             (lift (CollectionSpreadClicked collectionSpread_))
@@ -283,9 +287,11 @@ view lift viewConfig model =
                     [ Html.class "index__subtitle" ]
                     [ text "Collections will show here, so you can quickly find them." ]
                 ]
-            , Lists.ol
-                [ cs "index__items-wrapper"
-                ]
+            , Lists.ol (lift << Mdc)
+                -- TODO: id
+                ""
+                model.mdc
+                [ cs "index__items-wrapper" ]
                 (List.map Tuple.second <|
                     List.sortBy Tuple.first <|
                         List.concat
@@ -301,7 +307,7 @@ view lift viewConfig model =
                 , Fab.ripple
                 , Options.onClick (lift NewSpreadClicked)
                 ]
-                "add"
+                [ text "add" ]
             ]
         , newSpreadDialog lift viewConfig model
         ]
@@ -321,13 +327,13 @@ newSpreadDialog lift viewConfig model =
                         |> Maybe.withDefault ""
 
         monthlySpreadName =
-            monthName ++ " " ++ toString year
+            monthName ++ " " ++ String.fromInt year
 
         dailySpreadName =
             String.join " "
-                [ toString dayOfMonth
+                [ String.fromInt dayOfMonth
                 , monthName
-                , toString year
+                , String.fromInt year
                 ]
     in
     Dialog.view (lift << Mdc)
@@ -336,55 +342,54 @@ newSpreadDialog lift viewConfig model =
         [ Dialog.onClose (lift NewSpreadDialogClosed)
         , when model.showNewSpreadDialog Dialog.open
         ]
-        [ Dialog.surface []
-            [ Dialog.header []
-                []
-            , Dialog.body []
-                [ Lists.ul
-                    [ Lists.twoLine
+        [ Dialog.content []
+            [ Lists.ul (lift << Mdc)
+                -- TODO: id
+                ""
+                model.mdc
+                [ Lists.twoLine
+                ]
+                [ Lists.li
+                    [ Options.onClick (lift NewMonthlySpreadClicked)
+                    , Options.attribute (Html.tabindex 0)
                     ]
-                    [ Lists.li
-                        [ Options.onClick (lift NewMonthlySpreadClicked)
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New monthly spread"
-                            , Lists.secondaryText []
-                                [ text monthlySpreadName
-                                ]
+                    [ Lists.text []
+                        [ text "New monthly spread"
+                        , Lists.secondaryText []
+                            [ text monthlySpreadName
                             ]
                         ]
-                    , Lists.li
-                        [ Options.onClick (lift NewDailySpreadClicked)
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New daily spread"
-                            , Lists.secondaryText []
-                                [ text dailySpreadName
-                                ]
+                    ]
+                , Lists.li
+                    [ Options.onClick (lift NewDailySpreadClicked)
+                    , Options.attribute (Html.tabindex 0)
+                    ]
+                    [ Lists.text []
+                        [ text "New daily spread"
+                        , Lists.secondaryText []
+                            [ text dailySpreadName
                             ]
                         ]
-                    , Lists.li
-                        [ Options.onClick (lift NewCollectionSpreadClicked)
-                        , Options.attribute (Html.tabindex 0)
-                        ]
-                        [ Lists.text []
-                            [ text "New collection"
-                            ]
+                    ]
+                , Lists.li
+                    [ Options.onClick (lift NewCollectionSpreadClicked)
+                    , Options.attribute (Html.tabindex 0)
+                    ]
+                    [ Lists.text []
+                        [ text "New collection"
                         ]
                     ]
                 ]
-            , Dialog.footer []
-                [ Button.view (lift << Mdc)
-                    "new-spread-dialog__cancel"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.onClick (lift NewSpreadDialogClosed)
-                    , Dialog.cancel
-                    ]
-                    [ text "Cancel"
-                    ]
+            ]
+        , Dialog.actions []
+            [ Button.view (lift << Mdc)
+                "new-spread-dialog__cancel"
+                model.mdc
+                [ Button.ripple
+                , Button.onClick (lift NewSpreadDialogClosed)
+                , Dialog.cancel
+                ]
+                [ text "Cancel"
                 ]
             ]
         ]

@@ -1,24 +1,24 @@
-module View.EditDailySpread exposing (..)
+module View.EditDailySpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
-import Date exposing (Date)
+import Browser.Navigation
+import Html exposing (Html, text)
 import Html.Attributes as Html
 import Html.Events as Html
-import Html exposing (Html, text)
 import Material
 import Material.Button as Button
 import Material.Dialog as Dialog
 import Material.Icon as Icon
 import Material.List as Lists
-import Material.Options as Options exposing (styled, cs, css, when)
-import Material.Textfield as TextField
+import Material.Options as Options exposing (cs, css, styled, when)
+import Material.TextField as TextField
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
-import Private.ObjectId as ObjectId
+import Parse.Private.ObjectId as ObjectId
+import Route
 import Task exposing (Task)
+import Time
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.DailySpread as DailySpread exposing (DailySpread)
-import Url
 import View
 
 
@@ -58,7 +58,7 @@ type Msg msg
     | YearChanged String
     | DayOfMonthChanged String
     | SaveClicked
-    | SaveResult (Result Parse.Error { updatedAt : Date })
+    | SaveResult (Result Parse.Error { updatedAt : Time.Posix })
     | CancelClicked
 
 
@@ -100,16 +100,16 @@ update lift viewConfig msg model =
         DailySpreadResult (Ok dailySpread) ->
             ( { model
                 | dailySpread = Just dailySpread
-                , year = toString dailySpread.year
-                , month = toString dailySpread.month
-                , dayOfMonth = toString dailySpread.dayOfMonth
+                , year = String.fromInt dailySpread.year
+                , month = String.fromInt dailySpread.month
+                , dayOfMonth = String.fromInt dailySpread.dayOfMonth
               }
             , Cmd.none
             )
 
         BackClicked ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
             )
 
         DeleteClicked ->
@@ -134,7 +134,7 @@ update lift viewConfig msg model =
 
         DeleteResult (Ok _) ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
             )
 
         YearChanged year ->
@@ -153,17 +153,14 @@ update lift viewConfig msg model =
                     (\dailySpread ->
                         { dailySpread
                             | year =
-                                  String.toInt model.year
-                                  |> Result.toMaybe
-                                  |> Maybe.withDefault dailySpread.year
+                                String.toInt model.year
+                                    |> Maybe.withDefault dailySpread.year
                             , month =
-                                  String.toInt model.month
-                                  |> Result.toMaybe
-                                  |> Maybe.withDefault dailySpread.month
+                                String.toInt model.month
+                                    |> Maybe.withDefault dailySpread.month
                             , dayOfMonth =
-                                  String.toInt model.dayOfMonth
-                                  |> Result.toMaybe
-                                  |> Maybe.withDefault dailySpread.dayOfMonth
+                                String.toInt model.dayOfMonth
+                                    |> Maybe.withDefault dailySpread.dayOfMonth
                         }
                     )
                 |> Maybe.map
@@ -182,16 +179,16 @@ update lift viewConfig msg model =
         SaveResult (Ok _) ->
             ( model
             , model.dailySpread
-                |> Maybe.map (Url.DailySpread << .objectId)
-                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.map (Route.DailySpread << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
         CancelClicked ->
             ( model
             , model.dailySpread
-                |> Maybe.map (Url.DailySpread << .objectId)
-                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.map (Route.DailySpread << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
@@ -207,146 +204,142 @@ view lift viewConfig model =
                 |> Maybe.map
                     DailySpread.fromParseObject
     in
-        Html.div
-            [ Html.class "edit-daily-spread"
+    Html.div
+        [ Html.class "edit-daily-spread"
+        ]
+        [ viewConfig.toolbar
+            { title =
+                dailySpread
+                    |> Maybe.map DailySpread.title
+                    |> Maybe.withDefault ""
+            , menuIcon =
+                Icon.view
+                    [ Toolbar.menuIcon
+                    , Options.onClick (lift BackClicked)
+                    ]
+                    "arrow_back"
+            , additionalSections =
+                []
+            }
+        , Html.div
+            [ Html.class "edit-daily-spread__wrapper"
             ]
-            [ viewConfig.toolbar
-                { title =
-                    dailySpread
-                        |> Maybe.map DailySpread.title
-                        |> Maybe.withDefault ""
-                , menuIcon =
-                    Icon.view
-                        [ Toolbar.menuIcon
-                        , Options.onClick (lift BackClicked)
-                        ]
-                        "arrow_back"
-                , additionalSections =
+            [ Html.div
+                [ Html.class "edit-daily-spread__year-wrapper"
+                ]
+                [ TextField.view (lift << Mdc)
+                    "edit-daily-spread__year"
+                    model.mdc
+                    [ TextField.label "Year"
+                    , TextField.value model.year
+                    , Options.onInput (lift << YearChanged)
+                    ]
                     []
-                }
+                ]
             , Html.div
+                [ Html.class "edit-daily-spread__month-wrapper"
+                ]
+                [ TextField.view (lift << Mdc)
+                    "edit-daily-spread__month"
+                    model.mdc
+                    [ TextField.label "Month"
+                    , TextField.value model.month
+                    , Options.onInput (lift << MonthChanged)
+                    ]
+                    []
+                ]
+            , Html.div
+                [ Html.class "edit-daily-spread__day-of-month-wrapper"
+                ]
+                [ TextField.view (lift << Mdc)
+                    "edit-daily-spread__day-of-month"
+                    model.mdc
+                    [ TextField.label "Day of month"
+                    , TextField.value model.dayOfMonth
+                    , Options.onInput (lift << DayOfMonthChanged)
+                    ]
+                    []
+                ]
+            , Html.div
+                [ Html.class "edit-daily-spread__buttons-wrapper"
+                ]
+                [ Button.view (lift << Mdc)
+                    "edit-daily-spread__save-button"
+                    model.mdc
+                    [ Button.ripple
+                    , Button.raised
+                    , Button.onClick (lift SaveClicked)
+                    ]
+                    [ text "Save" ]
+                , Button.view (lift << Mdc)
+                    "edit-daily-spread__cancel-button"
+                    model.mdc
+                    [ Button.ripple
+                    , Button.onClick (lift CancelClicked)
+                    ]
+                    [ text "Cancel" ]
+                ]
+            ]
+        , if model.dailySpread /= Nothing then
+            Html.div
                 [ Html.class "edit-daily-spread__wrapper"
                 ]
-                [ Html.div
-                    [ Html.class "edit-daily-spread__year-wrapper"
-                    ]
-                    [ TextField.view (lift << Mdc)
-                        "edit-daily-spread__year"
-                        model.mdc
-                        [ TextField.label "Year"
-                        , TextField.value model.year
-                        , Options.onInput (lift << YearChanged)
-                        ]
-                        []
+                [ Html.h2
+                    [ Html.class "edit-daily-spread__headline" ]
+                    [ text "Delete"
                     ]
                 , Html.div
-                    [ Html.class "edit-daily-spread__month-wrapper"
-                    ]
-                    [ TextField.view (lift << Mdc)
-                        "edit-daily-spread__month"
-                        model.mdc
-                        [ TextField.label "Month"
-                        , TextField.value model.month
-                        , Options.onInput (lift << MonthChanged)
-                        ]
-                        []
-                    ]
-                , Html.div
-                    [ Html.class "edit-daily-spread__day-of-month-wrapper"
-                    ]
-                    [ TextField.view (lift << Mdc)
-                        "edit-daily-spread__day-of-month"
-                        model.mdc
-                        [ TextField.label "Day of month"
-                        , TextField.value model.dayOfMonth
-                        , Options.onInput (lift << DayOfMonthChanged)
-                        ]
-                        []
-                    ]
-                , Html.div
-                    [ Html.class "edit-daily-spread__buttons-wrapper"
+                    [ Html.class "edit-daily-spread__delete-wrapper"
                     ]
                     [ Button.view (lift << Mdc)
-                        "edit-daily-spread__save-button"
+                        "edit-daily-spread__delete"
                         model.mdc
-                        [ Button.ripple
-                        , Button.raised
-                        , Button.onClick (lift SaveClicked)
+                        [ Button.raised
+                        , Button.ripple
+                        , Button.onClick (lift DeleteClicked)
                         ]
-                        [ text "Save" ]
-                    , Button.view (lift << Mdc)
-                        "edit-daily-spread__cancel-button"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick (lift CancelClicked)
-                        ]
-                        [ text "Cancel" ]
-                    ]
-                ]
-            , if model.dailySpread /= Nothing then
-                Html.div
-                    [ Html.class "edit-daily-spread__wrapper"
-                    ]
-                    [ Html.h2
-                        [ Html.class "edit-daily-spread__headline" ]
                         [ text "Delete"
                         ]
-                    , Html.div
-                        [ Html.class "edit-daily-spread__delete-wrapper"
+                    ]
+                , Dialog.view (lift << Mdc)
+                    "edit-daily-spread__confirm-delete"
+                    model.mdc
+                    [ when model.showConfirmDeleteDialog Dialog.open
+                    , Dialog.onClose (lift ConfirmDeleteDialogClosed)
+                    ]
+                    [ styled Html.h3
+                        [ Dialog.title
                         ]
-                        [ Button.view (lift << Mdc)
-                            "edit-daily-spread__delete"
-                            model.mdc
-                            [ Button.raised
-                            , Button.ripple
-                            , Button.onClick (lift DeleteClicked)
-                            ]
-                            [ text "Delete"
-                            ]
+                        [ text "Confirm to delete"
                         ]
-                    , Dialog.view (lift << Mdc)
-                        "edit-daily-spread__confirm-delete"
-                        model.mdc
-                        [ when model.showConfirmDeleteDialog Dialog.open
-                        , Dialog.onClose (lift ConfirmDeleteDialogClosed)
-                        ]
-                        [ Dialog.surface []
-                            [ Dialog.header []
-                                [ styled Html.h3
-                                    [ Dialog.title
-                                    ]
-                                    [ text "Confirm to delete"
-                                    ]
-                                ]
-                            , Dialog.body []
-                                [ text """
+                    , Dialog.content []
+                        [ text """
 Do you really want to delete this daily spread?
                           """
-                                ]
-                            , Dialog.footer []
-                                [ Button.view (lift << Mdc)
-                                    "edit-daily-spread__confirm-delete__cancel"
-                                    model.mdc
-                                    [ Button.ripple
-                                    , Dialog.cancel
-                                    , Button.onClick (lift CancelDeleteClicked)
-                                    ]
-                                    [ text "No"
-                                    ]
-                                , Button.view (lift << Mdc)
-                                    "edit-daily-spread__confirm-delete__accept"
-                                    model.mdc
-                                    [ Button.ripple
-                                    , Dialog.accept
-                                    , Button.onClick (lift ConfirmDeleteClicked)
-                                    ]
-                                    [ text "Yes"
-                                    ]
-                                ]
+                        ]
+                    , Dialog.actions []
+                        [ Button.view (lift << Mdc)
+                            "edit-daily-spread__confirm-delete__cancel"
+                            model.mdc
+                            [ Button.ripple
+                            , Dialog.cancel
+                            , Button.onClick (lift CancelDeleteClicked)
                             ]
-                        , Dialog.backdrop [] []
+                            [ text "No"
+                            ]
+                        , Button.view (lift << Mdc)
+                            "edit-daily-spread__confirm-delete__accept"
+                            model.mdc
+                            [ Button.ripple
+                            , Dialog.accept
+                            , Button.onClick (lift ConfirmDeleteClicked)
+                            ]
+                            [ text "Yes"
+                            ]
                         ]
                     ]
-              else
-                text ""
-            ]
+                ]
+
+          else
+            text ""
+        ]

@@ -25,10 +25,10 @@ parser =
 
 bulletParser symbolParser ctor =
     oneOf
-    [ succeed ctor
-        |. symbolParser
-        |= textParser
-    ]
+        [ succeed ctor
+            |. symbolParser
+            |= textParser
+        ]
 
 
 eventParser =
@@ -67,9 +67,8 @@ taskParser =
 
 
 spaces =
-    ignore zeroOrMore (\char -> List.member char [ ' ', '\t', '\x0D', '\n' ])
+    chompWhile (\char -> List.member char [ ' ', '\t', '\u{000D}', '\n' ])
 
 
 textParser =
-    keep zeroOrMore (always True)
-        |> map String.trim
+    map String.trim (getChompedString (chompWhile (always True)))

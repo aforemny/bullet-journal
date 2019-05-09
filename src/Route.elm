@@ -1,17 +1,17 @@
-module Url exposing (..)
+module Route exposing (Route(..), fromUrl, toString)
 
-import Navigation
 import Parse
-import Private.ObjectId as ObjectId
+import Parse.Private.ObjectId as ObjectId
 import String
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import UrlParser exposing (..)
+import Url exposing (Url)
+import Url.Parser exposing ((</>), s)
 
 
-type Url
+type Route
     = Index
     | Start
     | CollectionSpread (Parse.ObjectId CollectionSpread)
@@ -24,7 +24,7 @@ type Url
     | NotFound String
 
 
-toString : Url -> String
+toString : Route -> String
 toString url =
     String.cons '#' <|
         case url of
@@ -62,33 +62,36 @@ toString url =
                 hash
 
 
-fromLocation : Navigation.Location -> Url
-fromLocation location =
+fromUrl : Url -> Route
+fromUrl url =
     case
-        parseHash parseUrl location
-            |> Maybe.withDefault (NotFound (String.dropLeft 1 location.hash))
+        Url.Parser.parse parseUrl
+            { url | path = Maybe.withDefault "" url.fragment }
+            |> Maybe.withDefault
+                (NotFound (Maybe.withDefault "" url.fragment))
     of
         NotFound "" ->
             Start
 
-        url ->
-            url
+        otherUrl ->
+            otherUrl
 
 
 parseUrl =
     let
         objectId =
-            map ObjectId.fromString string
+            Url.Parser.map ObjectId.fromString Url.Parser.string
     in
-    oneOf
-        [ map Start (s "")
-        , map Index (s "index")
-        , map (EditBullet Nothing) (s "bullet" </> s "new")
-        , map (EditBullet << Just) (s "bullet" </> objectId)
-        , map EditCollectionSpread (s "collection-spread" </> objectId </> s "edit")
-        , map EditDailySpread (s "daily-spread" </> objectId </> s "edit")
-        , map EditMonthlySpread (s "monthly-spread" </> objectId </> s "edit")
-        , map CollectionSpread (s "collection-spread" </> objectId)
-        , map DailySpread (s "daily-spread" </> objectId)
-        , map MonthlySpread (s "monthly-spread" </> objectId)
+    Url.Parser.oneOf
+        [ Url.Parser.map Start (s "")
+        , Url.Parser.map Index (s "index")
+        , Url.Parser.map (EditBullet Nothing) (s "bullet" </> s "new")
+        , Url.Parser.map (EditBullet << Just) (s "bullet" </> objectId)
+        , Url.Parser.map EditCollectionSpread
+            (s "collection-spread" </> objectId </> s "edit")
+        , Url.Parser.map EditDailySpread (s "daily-spread" </> objectId </> s "edit")
+        , Url.Parser.map EditMonthlySpread (s "monthly-spread" </> objectId </> s "edit")
+        , Url.Parser.map CollectionSpread (s "collection-spread" </> objectId)
+        , Url.Parser.map DailySpread (s "daily-spread" </> objectId)
+        , Url.Parser.map MonthlySpread (s "monthly-spread" </> objectId)
         ]

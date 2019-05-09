@@ -1,6 +1,5 @@
-module Type.CollectionSpread exposing (..)
+module Type.CollectionSpread exposing (CollectionSpread, canonicalDate, create, decode, delete, empty, encode, fromParseObject, get, title, update)
 
-import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
@@ -8,19 +7,20 @@ import Parse
 import Parse.Decode
 import Parse.Encode
 import Task exposing (Task)
+import Time
 import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias CollectionSpread =
     { title : String
-    , createdAt : Date
+    , createdAt : Time.Posix
     }
 
 
 empty : String -> CollectionSpread
-empty title =
-    { title = title
-    , createdAt = Date.fromTime 0
+empty title_ =
+    { title = title_
+    , createdAt = Time.millisToPosix 0
     }
 
 
@@ -33,12 +33,12 @@ encode collectionSpread =
 
 decode : Decoder (Parse.Object CollectionSpread)
 decode =
-    Decode.decode
-        (\objectId createdAt updatedAt title ->
+    Decode.succeed
+        (\objectId createdAt updatedAt title_ ->
             { objectId = objectId
             , createdAt = createdAt
             , updatedAt = updatedAt
-            , title = title
+            , title = title_
             }
         )
         |> Decode.required "objectId" Parse.Decode.objectId
@@ -54,46 +54,46 @@ fromParseObject collectionSpread =
     }
 
 
-canonicalDate : CollectionSpread -> ( Int, Int, Int )
-canonicalDate collectionSpread =
-    ( Date.year collectionSpread.createdAt
-    , case Date.month collectionSpread.createdAt of
-        Date.Jan ->
+canonicalDate : Time.Zone -> CollectionSpread -> ( Int, Int, Int )
+canonicalDate tz collectionSpread =
+    ( Time.toYear tz collectionSpread.createdAt
+    , case Time.toMonth tz collectionSpread.createdAt of
+        Time.Jan ->
             1
 
-        Date.Feb ->
+        Time.Feb ->
             2
 
-        Date.Mar ->
+        Time.Mar ->
             3
 
-        Date.Apr ->
+        Time.Apr ->
             4
 
-        Date.May ->
+        Time.May ->
             5
 
-        Date.Jun ->
+        Time.Jun ->
             6
 
-        Date.Jul ->
+        Time.Jul ->
             7
 
-        Date.Aug ->
+        Time.Aug ->
             8
 
-        Date.Sep ->
+        Time.Sep ->
             9
 
-        Date.Oct ->
+        Time.Oct ->
             10
 
-        Date.Nov ->
+        Time.Nov ->
             11
 
-        Date.Dec ->
+        Time.Dec ->
             12
-    , Date.day collectionSpread.createdAt
+    , Time.toDay tz collectionSpread.createdAt
     )
 
 
@@ -124,7 +124,7 @@ update :
     Parse.Config
     -> Parse.ObjectId CollectionSpread
     -> CollectionSpread
-    -> Task Parse.Error { updatedAt : Date }
+    -> Task Parse.Error { updatedAt : Time.Posix }
 update parse collectionSpreadId collectionSpread =
     Parse.toTask parse
         (Parse.update "CollectionSpread" encode collectionSpreadId collectionSpread)

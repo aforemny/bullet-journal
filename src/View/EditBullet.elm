@@ -1,6 +1,6 @@
-module View.EditBullet exposing (..)
+module View.EditBullet exposing (Model, Msg(..), Tipe(..), bulletDelete, bulletForm, defaultModel, deleteBullet, init, subscriptions, update, view)
 
-import Date exposing (Date)
+import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes as Html
 import Material
@@ -10,21 +10,21 @@ import Material.Dialog as Dialog
 import Material.Icon as Icon
 import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Select as Select
-import Material.Textfield as TextField
+import Material.TextField as TextField
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
-import Private.ObjectId as ObjectId
-import Private.Pointer as Pointer
+import Parse.Private.ObjectId as ObjectId
+import Parse.Private.Pointer as Pointer
+import Route exposing (Route)
 import Task
+import Time
 import Type.Bullet as Bullet exposing (Bullet)
-import Url exposing (Url)
 import View
 
 
 type alias Model msg =
     { mdc : Material.Model msg
-    , referringUrl : Url
+    , referringUrl : Route
     , bulletId : Maybe (Parse.ObjectId Bullet)
     , bullet : Maybe (Parse.Object Bullet)
     , spreadId : Maybe (Parse.ObjectId Bullet.Any)
@@ -46,7 +46,7 @@ type Tipe
 
 
 defaultModel :
-    Url
+    Route
     -> Maybe (Parse.ObjectId Bullet)
     -> Model msg
 defaultModel referringUrl bulletId =
@@ -74,8 +74,8 @@ type Msg msg
     | TaskStateChanged Bullet.TaskState
     | TextChanged String
     | SaveClicked
-    | CreateResult (Result Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Date })
-    | UpdateResult (Result Parse.Error { updatedAt : Date })
+    | CreateResult (Result Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Time.Posix })
+    | UpdateResult (Result Parse.Error { updatedAt : Time.Posix })
     | CancelClicked
     | BackClicked
     | DeleteClicked
@@ -91,7 +91,7 @@ type Msg msg
 init :
     (Msg msg -> msg)
     -> View.Config msg
-    -> Url
+    -> Route
     -> Maybe (Parse.ObjectId Bullet)
     -> Maybe (Model msg)
     -> ( Model msg, Cmd msg )
@@ -167,9 +167,9 @@ update lift viewConfig msg model =
                     , spreadId = model.spreadId
                     , state = state
                     , text = model.text
-                    , year = Result.toMaybe (String.toInt model.year)
-                    , month = Result.toMaybe (String.toInt model.month)
-                    , dayOfMonth = Result.toMaybe (String.toInt model.dayOfMonth)
+                    , year = String.toInt model.year
+                    , month = String.toInt model.month
+                    , dayOfMonth = String.toInt model.dayOfMonth
                     }
             in
             ( model
@@ -189,19 +189,27 @@ update lift viewConfig msg model =
             ( { model | error = Just err }, Cmd.none )
 
         UpdateResult (Ok _) ->
-            ( model, Navigation.newUrl (Url.toString model.referringUrl) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            )
 
         CreateResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
         CreateResult (Ok _) ->
-            ( model, Navigation.newUrl (Url.toString model.referringUrl) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            )
 
         CancelClicked ->
-            ( model, Navigation.newUrl (Url.toString model.referringUrl) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            )
 
         BackClicked ->
-            ( model, Navigation.newUrl (Url.toString model.referringUrl) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            )
 
         DeleteClicked ->
             ( { model | showConfirmDeleteDialog = True }, Cmd.none )
@@ -225,7 +233,7 @@ update lift viewConfig msg model =
 
         DeleteResult (Ok _) ->
             ( model
-            , Navigation.newUrl (Url.toString model.referringUrl)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
             )
 
         BulletResult (Err err) ->
@@ -255,9 +263,10 @@ update lift viewConfig msg model =
                         Bullet.Task taskState ->
                             taskState
                 , text = bullet.text
-                , year = Maybe.withDefault "" (Maybe.map toString bullet.year)
-                , month = Maybe.withDefault "" (Maybe.map toString bullet.month)
-                , dayOfMonth = Maybe.withDefault "" (Maybe.map toString bullet.dayOfMonth)
+                , year = Maybe.withDefault "" (Maybe.map String.fromInt bullet.year)
+                , month = Maybe.withDefault "" (Maybe.map String.fromInt bullet.month)
+                , dayOfMonth =
+                    Maybe.withDefault "" (Maybe.map String.fromInt bullet.dayOfMonth)
               }
             , Cmd.none
             )
@@ -521,6 +530,7 @@ bulletForm lift model =
 bulletDelete lift model =
     if model.bulletId /= Nothing then
         deleteBullet lift model
+
     else
         text ""
 
@@ -552,40 +562,35 @@ deleteBullet lift model =
             [ when model.showConfirmDeleteDialog Dialog.open
             , Dialog.onClose (lift ConfirmDeleteDialogClosed)
             ]
-            [ Dialog.surface []
-                [ Dialog.header []
-                    [ styled Html.h3
-                        [ Dialog.title
-                        ]
-                        [ text "Confirm to delete"
-                        ]
-                    ]
-                , Dialog.body []
-                    [ text """
+            [ styled Html.h3
+                [ Dialog.title
+                ]
+                [ text "Confirm to delete"
+                ]
+            , Dialog.content []
+                [ text """
     Do you really want to delete this bullet?"
                               """
+                ]
+            , Dialog.actions []
+                [ Button.view (lift << Mdc)
+                    "edit-bullet__confirm-delete__cancel"
+                    model.mdc
+                    [ Button.ripple
+                    , Dialog.cancel
+                    , Button.onClick (lift CancelDeleteClicked)
                     ]
-                , Dialog.footer []
-                    [ Button.view (lift << Mdc)
-                        "edit-bullet__confirm-delete__cancel"
-                        model.mdc
-                        [ Button.ripple
-                        , Dialog.cancel
-                        , Button.onClick (lift CancelDeleteClicked)
-                        ]
-                        [ text "No"
-                        ]
-                    , Button.view (lift << Mdc)
-                        "edit-bullet__confirm-delete__accept"
-                        model.mdc
-                        [ Button.ripple
-                        , Dialog.accept
-                        , Button.onClick (lift ConfirmDeleteClicked)
-                        ]
-                        [ text "Yes"
-                        ]
+                    [ text "No"
+                    ]
+                , Button.view (lift << Mdc)
+                    "edit-bullet__confirm-delete__accept"
+                    model.mdc
+                    [ Button.ripple
+                    , Dialog.accept
+                    , Button.onClick (lift ConfirmDeleteClicked)
+                    ]
+                    [ text "Yes"
                     ]
                 ]
-            , Dialog.backdrop [] []
             ]
         ]

@@ -1,7 +1,8 @@
-port module Ports exposing (..)
+port module Ports exposing (now, nowUnsafe, readDateUnsafe, readDayUnsafe, today, todayUnsafe)
 
-import Date exposing (Date)
+import Iso8601
 import Json.Decode exposing (Value)
+import Time
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 
@@ -9,38 +10,38 @@ import Time.Calendar.Gregorian as Calendar
 port todayUnsafe : (String -> msg) -> Sub msg
 
 
-today : (Calendar.Day -> msg) -> Sub msg
+today : (Maybe Calendar.Day -> msg) -> Sub msg
 today lift =
     todayUnsafe (lift << readDayUnsafe)
 
 
-readDayUnsafe : String -> Calendar.Day
+readDayUnsafe : String -> Maybe Calendar.Day
 readDayUnsafe dayString =
     case
         dayString
             |> String.split "-"
             |> List.map String.toInt
     of
-        [ Ok year, Ok month, Ok dayOfMonth ] ->
-            Calendar.fromGregorian year month dayOfMonth
+        [ Just year, Just month, Just dayOfMonth ] ->
+            Just (Calendar.fromGregorian year month dayOfMonth)
 
         _ ->
-            Debug.crash ("Ports.readDayUnsafe: " ++ dayString)
+            Nothing
 
 
 port nowUnsafe : (String -> msg) -> Sub msg
 
 
-now : (Date -> msg) -> Sub msg
+now : (Maybe Time.Posix -> msg) -> Sub msg
 now lift =
     nowUnsafe (lift << readDateUnsafe)
 
 
-readDateUnsafe : String -> Date
+readDateUnsafe : String -> Maybe Time.Posix
 readDateUnsafe dateString =
-    case Date.fromString dateString of
+    case Iso8601.toTime dateString of
         Ok date ->
-            date
+            Just date
 
         Err _ ->
-            Debug.crash ("Ports.readDateUnsafe: " ++ dateString)
+            Nothing

@@ -1,6 +1,6 @@
 build: node_modules
 	mkdir -p public/fonts
-	elm-make --yes src/Main.elm --output public/elm.js
+	elm make src/Main.elm --output public/elm.js
 	cp page.html public/index.html
 	cp elm-mdc.js public/
 	cp node_modules/normalize.css/normalize.css public/

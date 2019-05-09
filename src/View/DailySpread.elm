@@ -1,5 +1,6 @@
-module View.DailySpread exposing (..)
+module View.DailySpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
+import Browser.Navigation
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import Html.Attributes as Html
@@ -12,8 +13,8 @@ import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
+import Route exposing (Route)
 import Task
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
@@ -21,7 +22,6 @@ import Time.Calendar.OrdinalDate as Calendar
 import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.DailySpread as DailySpread exposing (DailySpread)
-import Url exposing (Url)
 import View
 
 
@@ -99,24 +99,28 @@ update lift viewConfig msg model =
             ( { model | bullets = bullets }, Cmd.none )
 
         NewBulletClicked ->
-            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet Nothing))
+            )
 
         EditClicked ->
             ( model
             , model.dailySpread
-                |> Maybe.map (Url.EditDailySpread << .objectId)
-                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.map (Route.EditDailySpread << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
         BulletClicked bulletId ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId)))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet (Just bulletId)))
             )
 
         BackClicked ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
             )
 
 
@@ -183,9 +187,11 @@ view lift viewConfig model =
                     [ Html.class "daily-spread__subtitle" ]
                     [ text "The Daily Log is designed for day-to-day use." ]
                 ]
-            , Lists.ol
-                [ cs "daily-spread__bullet-wrapper"
-                ]
+            , Lists.ol (lift << Mdc)
+                -- TODO: id
+                ""
+                model.mdc
+                [ cs "daily-spread__bullet-wrapper" ]
                 (List.map
                     (\bullet ->
                         Bullet.view

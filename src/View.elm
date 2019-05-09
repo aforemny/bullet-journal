@@ -1,16 +1,19 @@
-module View exposing (..)
+module View exposing (Config, ToolbarConfig)
 
-import Date exposing (Date)
+import Browser.Navigation
 import Html exposing (Html, text)
 import Parse
+import Time
 import Time.Calendar.Days as Calendar
 
 
 type alias Config msg =
     { toolbar : ToolbarConfig msg -> Html msg
     , today : Calendar.Day
-    , now : Date
+    , now : Time.Posix
     , parse : Parse.Config
+    , key : Browser.Navigation.Key
+    , timeZone : Time.Zone
     }
 
 

@@ -1,6 +1,7 @@
-module Main exposing (..)
+module Main exposing (main)
 
-import Date exposing (Date)
+import Browser
+import Browser.Navigation
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import Html.Attributes as Html
@@ -14,12 +15,13 @@ import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
+import Parse.Private.ObjectId as ObjectId
 import ParseConfig exposing (parseConfig)
 import Ports
-import Private.ObjectId as ObjectId
+import Route exposing (Route)
 import Task exposing (Task)
+import Time
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
@@ -41,8 +43,9 @@ import View.Start
 
 
 type alias Model =
-    { mdc : Material.Model Msg
-    , url : Url
+    { key : Browser.Navigation.Key
+    , mdc : Material.Model Msg
+    , url : Route
     , collectionSpread : View.CollectionSpread.Model Msg
     , dailySpread : View.DailySpread.Model Msg
     , index : View.Index.Model Msg
@@ -53,15 +56,16 @@ type alias Model =
     , editBullet : Maybe (View.EditBullet.Model Msg)
     , start : View.Start.Model Msg
     , today : Calendar.Day
-    , now : Date
+    , now : Time.Posix
     , error : Maybe Parse.Error
+    , timeZone : Time.Zone
     }
 
 
-defaultModel : Model
-defaultModel =
+defaultModel : Browser.Navigation.Key -> Model
+defaultModel key =
     { mdc = Material.defaultModel
-    , url = Url.Index
+    , url = Route.Index
     , collectionSpread = View.CollectionSpread.defaultModel
     , dailySpread = View.DailySpread.defaultModel
     , index = View.Index.defaultModel
@@ -72,17 +76,18 @@ defaultModel =
     , editBullet = Nothing
     , start = View.Start.defaultModel
     , today = Calendar.fromGregorian 1970 1 1
-    , now = Date.fromTime 0
+    , now = Time.millisToPosix 0
     , error = Nothing
+    , timeZone = Time.utc
+    , key = key
     }
 
 
 type Msg
     = NoOp
     | Mdc (Material.Msg Msg)
-    | SetUrl Url
-    | TodayChanged Calendar.Day
-    | NowChanged Date
+    | TodayChanged (Maybe Calendar.Day)
+    | NowChanged (Maybe Time.Posix)
     | BackClicked
     | EditBulletMsg (View.EditBullet.Msg Msg)
     | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
@@ -97,6 +102,8 @@ type Msg
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | MonthClicked
     | MonthClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
+    | UrlRequested Browser.UrlRequest
+    | UrlChanged Url
 
 
 type alias Flags =
@@ -107,35 +114,40 @@ type alias Flags =
 
 main : Program Flags Model Msg
 main =
-    Navigation.programWithFlags (SetUrl << Url.fromLocation)
+    Browser.application
         { init = init
         , subscriptions = subscriptions
         , update = update
         , view = view
+        , onUrlRequest = UrlRequested
+        , onUrlChange = UrlChanged
         }
 
 
-init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
-init flags location =
+init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init flags url_ key =
     let
         url =
-            Url.fromLocation location
+            Route.fromUrl url_
 
         viewConfig =
             makeViewConfig model
 
         model =
-            { defaultModel
-                | today = Ports.readDayUnsafe flags.today
-                , now = Ports.readDateUnsafe flags.now
-                , url = url
-            }
+            defaultModel key
+                |> (\model_ ->
+                        { model_
+                            | today =
+                                Ports.readDayUnsafe flags.today
+                                    |> Maybe.withDefault model_.today
+                            , now =
+                                Ports.readDateUnsafe flags.now
+                                    |> Maybe.withDefault model_.now
+                            , url = url
+                        }
+                   )
     in
-    ( model
-    , Cmd.batch
-        [ Material.init Mdc
-        ]
-    )
+    ( model, Material.init Mdc )
         |> initView viewConfig url
 
 
@@ -159,18 +171,18 @@ subscriptions model =
         ]
 
 
-initView : View.Config Msg -> Url -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+initView : View.Config Msg -> Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 initView viewConfig url ( model, cmd ) =
     (case url of
-        Url.Start ->
+        Route.Start ->
             View.Start.init StartMsg viewConfig model.start
                 |> Tuple.mapFirst (\start -> { model | start = start })
 
-        Url.Index ->
+        Route.Index ->
             View.Index.init IndexMsg viewConfig model.index
                 |> Tuple.mapFirst (\index -> { model | index = index })
 
-        Url.MonthlySpread objectId ->
+        Route.MonthlySpread objectId ->
             View.MonthlySpread.init MonthlySpreadMsg
                 viewConfig
                 objectId
@@ -180,7 +192,7 @@ initView viewConfig url ( model, cmd ) =
                         { model | monthlySpread = monthlySpread }
                     )
 
-        Url.DailySpread objectId ->
+        Route.DailySpread objectId ->
             View.DailySpread.init
                 DailySpreadMsg
                 viewConfig
@@ -191,7 +203,7 @@ initView viewConfig url ( model, cmd ) =
                         { model | dailySpread = dailySpread }
                     )
 
-        Url.CollectionSpread objectId ->
+        Route.CollectionSpread objectId ->
             View.CollectionSpread.init CollectionSpreadMsg
                 viewConfig
                 objectId
@@ -201,7 +213,7 @@ initView viewConfig url ( model, cmd ) =
                         { model | collectionSpread = collectionSpread }
                     )
 
-        Url.EditMonthlySpread objectId ->
+        Route.EditMonthlySpread objectId ->
             View.EditMonthlySpread.init EditMonthlySpreadMsg
                 viewConfig
                 objectId
@@ -211,7 +223,7 @@ initView viewConfig url ( model, cmd ) =
                         { model | editMonthlySpread = editMonthlySpread }
                     )
 
-        Url.EditDailySpread objectId ->
+        Route.EditDailySpread objectId ->
             View.EditDailySpread.init
                 EditDailySpreadMsg
                 viewConfig
@@ -222,7 +234,7 @@ initView viewConfig url ( model, cmd ) =
                         { model | editDailySpread = editDailySpread }
                     )
 
-        Url.EditCollectionSpread objectId ->
+        Route.EditCollectionSpread objectId ->
             View.EditCollectionSpread.init EditCollectionSpreadMsg
                 viewConfig
                 objectId
@@ -232,12 +244,11 @@ initView viewConfig url ( model, cmd ) =
                         { model | editCollectionSpread = editCollectionSpread }
                     )
 
-        Url.EditBullet bulletId ->
+        Route.EditBullet bulletId ->
             View.EditBullet.init EditBulletMsg
                 viewConfig
-                (-- TODO:
-                 Url.Start
-                )
+                -- TODO:
+                Route.Start
                 bulletId
                 model.editBullet
                 |> Tuple.mapFirst
@@ -266,10 +277,6 @@ update msg model =
 
         Mdc msg_ ->
             Material.update Mdc msg_ model
-
-        SetUrl url ->
-            ( { model | url = url }, Cmd.none )
-                |> initView viewConfig url
 
         MonthlySpreadMsg msg_ ->
             model.monthlySpread
@@ -328,16 +335,20 @@ update msg model =
                     )
                 |> Maybe.withDefault ( model, Cmd.none )
 
-        TodayChanged today ->
+        TodayChanged Nothing ->
+            ( model, Cmd.none )
+
+        TodayChanged (Just today) ->
             ( { model | today = today }, Cmd.none )
 
-        NowChanged now ->
+        NowChanged Nothing ->
+            ( model, Cmd.none )
+
+        NowChanged (Just now) ->
             ( { model | now = now }, Cmd.none )
 
         BackClicked ->
-            ( model
-            , Navigation.newUrl (Url.toString Url.Start)
-            )
+            ( model, Browser.Navigation.pushUrl model.key (Route.toString Route.Start) )
 
         TodayClicked ->
             let
@@ -348,8 +359,8 @@ update msg model =
             , Task.attempt TodayClickedResult
                 (DailySpread.getBy viewConfig.parse year month dayOfMonth
                     |> Task.andThen
-                        (\dailySpread ->
-                            case dailySpread of
+                        (\dailySpread_ ->
+                            case dailySpread_ of
                                 Just dailySpread ->
                                     Task.succeed dailySpread.objectId
 
@@ -365,7 +376,8 @@ update msg model =
 
         TodayClickedResult (Ok dailySpreadId) ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.DailySpread dailySpreadId))
+            , Browser.Navigation.pushUrl model.key
+                (Route.toString (Route.DailySpread dailySpreadId))
             )
 
         MonthClicked ->
@@ -377,8 +389,8 @@ update msg model =
             , Task.attempt MonthClickedResult
                 (MonthlySpread.getBy viewConfig.parse year month
                     |> Task.andThen
-                        (\dailySpread ->
-                            case dailySpread of
+                        (\dailySpread_ ->
+                            case dailySpread_ of
                                 Just dailySpread ->
                                     Task.succeed dailySpread.objectId
 
@@ -394,8 +406,20 @@ update msg model =
 
         MonthClickedResult (Ok monthlySpreadId) ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.MonthlySpread monthlySpreadId))
+            , Browser.Navigation.pushUrl model.key
+                (Route.toString (Route.MonthlySpread monthlySpreadId))
             )
+
+        UrlRequested (Browser.Internal url) ->
+            ( model
+            , Browser.Navigation.pushUrl model.key (Route.toString (Route.fromUrl url))
+            )
+
+        UrlRequested (Browser.External url) ->
+            ( model, Browser.Navigation.load url )
+
+        UrlChanged url ->
+            ( { model | url = Route.fromUrl url }, Cmd.none )
 
 
 makeViewConfig : Model -> View.Config Msg
@@ -443,50 +467,55 @@ makeViewConfig model =
     , today = model.today
     , now = model.now
     , parse = parseConfig
+    , key = model.key
+    , timeZone = model.timeZone
     }
 
 
-view : Model -> Html Msg
 view model =
     let
         viewConfig =
             makeViewConfig model
     in
-    styled Html.div
-        [ cs "main"
-        , Toolbar.fixedAdjust "toolbar" model.mdc
+    { title = "Bujo"
+    , body =
+        [ styled Html.div
+            [ cs "main"
+            , Toolbar.fixedAdjust "toolbar" model.mdc
+            ]
+            [ case model.url of
+                Route.Start ->
+                    viewStart viewConfig model
+
+                Route.Index ->
+                    viewIndex viewConfig model
+
+                Route.MonthlySpread objectId ->
+                    viewMonthlySpread viewConfig model
+
+                Route.DailySpread objectId ->
+                    viewDailySpread viewConfig model
+
+                Route.CollectionSpread objectId ->
+                    viewCollectionSpread viewConfig model
+
+                Route.EditMonthlySpread objectId ->
+                    viewEditMonthlySpread viewConfig model
+
+                Route.EditDailySpread objectId ->
+                    viewEditDailySpread viewConfig model
+
+                Route.EditCollectionSpread objectId ->
+                    viewEditCollectionSpread viewConfig model
+
+                Route.NotFound urlString ->
+                    viewNotFound viewConfig urlString model
+
+                Route.EditBullet _ ->
+                    viewEditBullet viewConfig model
+            ]
         ]
-        [ case model.url of
-            Url.Start ->
-                viewStart viewConfig model
-
-            Url.Index ->
-                viewIndex viewConfig model
-
-            Url.MonthlySpread objectId ->
-                viewMonthlySpread viewConfig model
-
-            Url.DailySpread objectId ->
-                viewDailySpread viewConfig model
-
-            Url.CollectionSpread objectId ->
-                viewCollectionSpread viewConfig model
-
-            Url.EditMonthlySpread objectId ->
-                viewEditMonthlySpread viewConfig model
-
-            Url.EditDailySpread objectId ->
-                viewEditDailySpread viewConfig model
-
-            Url.EditCollectionSpread objectId ->
-                viewEditCollectionSpread viewConfig model
-
-            Url.NotFound urlString ->
-                viewNotFound viewConfig urlString model
-
-            Url.EditBullet _ ->
-                viewEditBullet viewConfig model
-        ]
+    }
 
 
 viewMonthlySpread : View.Config Msg -> Model -> Html Msg

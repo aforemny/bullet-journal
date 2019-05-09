@@ -1,6 +1,5 @@
-module Type.Bullet exposing (..)
+module Type.Bullet exposing (Any(..), Bullet, Config, State(..), TaskState(..), anyObjectId, castObjectId, create, decode, decodeState, decodeTaskState, delete, empty, emptyEvent, emptyNote, emptyTask, encode, encodeState, encodeTaskState, fromParseObject, get, getOf, update, view)
 
-import Date exposing (Date)
 import Html exposing (Html, text)
 import Html.Attributes as Html
 import Json.Decode as Decode exposing (Decoder, Value)
@@ -11,9 +10,10 @@ import Material.Options as Options exposing (cs, css, styled, when)
 import Parse
 import Parse.Decode
 import Parse.Encode
-import Private.ObjectId as ObjectId
-import Private.Pointer as Pointer
+import Parse.Private.ObjectId as ObjectId
+import Parse.Private.Pointer as Pointer
 import Task exposing (Task)
+import Time
 
 
 type alias Bullet =
@@ -260,7 +260,7 @@ getOf parse spreadClass spreadId =
 create :
     Parse.Config
     -> Bullet
-    -> Task Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Date }
+    -> Task Parse.Error { objectId : Parse.ObjectId Bullet, createdAt : Time.Posix }
 create parse bullet =
     Parse.toTask parse (Parse.create "Bullet" encode bullet)
 
@@ -269,7 +269,7 @@ update :
     Parse.Config
     -> Parse.ObjectId Bullet
     -> Bullet
-    -> Task Parse.Error { updatedAt : Date }
+    -> Task Parse.Error { updatedAt : Time.Posix }
 update parse bulletId bullet =
     Parse.toTask parse (Parse.update "Bullet" encode bulletId bullet)
 
@@ -287,7 +287,7 @@ type alias Config msg =
     }
 
 
-view : Config msg -> Bullet -> Html msg
+view : Config msg -> Bullet -> Lists.ListItem msg
 view config bullet =
     Lists.li
         (cs "bullet"

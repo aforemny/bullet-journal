@@ -1,12 +1,12 @@
-module Type.Day exposing (..)
+module Type.Day exposing (Create, Day, DayOfMonth, Month, Update, create, createOrUpdate, decode, encode, fromParseObject, get, list, update)
 
-import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Parse
 import Parse.Decode
 import Task exposing (Task)
+import Time
 
 
 type alias Day =
@@ -66,15 +66,16 @@ get parse month dayOfMonth =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "Day"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "month" (Encode.int month)
-                                , Parse.equalTo "dayOfMonth" (Encode.int dayOfMonth)
-                                ]
-                        , limit = Just 1
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "month" (Encode.int month)
+                                    , Parse.equalTo "dayOfMonth" (Encode.int dayOfMonth)
+                                    ]
+                            , limit = Just 1
+                        }
+                   )
             )
         )
         |> Task.map List.head
@@ -85,25 +86,26 @@ list parse month =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "Day"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "month" (Encode.int month)
-                                ]
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "month" (Encode.int month)
+                                    ]
+                        }
+                   )
             )
         )
 
 
 type alias Create =
-    { createdAt : Date
+    { createdAt : Time.Posix
     , objectId : Parse.ObjectId Day
     }
 
 
 type alias Update =
-    { updatedAt : Date
+    { updatedAt : Time.Posix
     }
 
 
@@ -114,8 +116,8 @@ createOrUpdate :
 createOrUpdate parse day =
     get parse day.month day.dayOfMonth
         |> Task.andThen
-            (\otherDay ->
-                case otherDay of
+            (\maybeOtherDay ->
+                case maybeOtherDay of
                     Just otherDay ->
                         update parse
                             { otherDay

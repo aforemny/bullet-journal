@@ -1,5 +1,6 @@
-module View.MonthlySpread exposing (..)
+module View.MonthlySpread exposing (Index, Model, Msg(..), dayView, defaultModel, init, subscriptions, update, view)
 
+import Browser.Navigation
 import Dict exposing (Dict)
 import Html exposing (Html, text)
 import Html.Attributes as Html
@@ -11,10 +12,10 @@ import Material.Card as Card
 import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
-import Material.Textfield as TextField
+import Material.TextField as TextField
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
+import Route exposing (Route)
 import Task
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
@@ -23,7 +24,6 @@ import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.Day as Day exposing (Day)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import Url exposing (Url)
 import View
 
 
@@ -112,13 +112,13 @@ update lift viewConfig msg model =
             ( { model | bullets = bullets }, Cmd.none )
 
         NewBulletClicked ->
-            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
+            ( model, Browser.Navigation.pushUrl viewConfig.key (Route.toString (Route.EditBullet Nothing)) )
 
         EditClicked ->
             ( model
             , model.monthlySpread
-                |> Maybe.map (Url.EditMonthlySpread << .objectId)
-                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.map (Route.EditMonthlySpread << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
@@ -167,11 +167,14 @@ update lift viewConfig msg model =
 
         BackClicked ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
             )
 
         BulletClicked bulletId ->
-            ( model, Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId))) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet (Just bulletId)))
+            )
 
 
 view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
@@ -180,11 +183,11 @@ view lift viewConfig model =
         monthlySpread_ =
             model.monthlySpread
 
-        monthlySpread =
+        maybeMonthlySpread =
             Maybe.map MonthlySpread.fromParseObject monthlySpread_
 
         title =
-            monthlySpread
+            maybeMonthlySpread
                 |> Maybe.map MonthlySpread.title
                 |> Maybe.withDefault ""
 
@@ -240,9 +243,8 @@ view lift viewConfig model =
             , Html.div
                 [ Html.class "monthly-spread__content-wrapper" ]
                 [ Html.ol
-                    [ Html.class "monthly-spread__days-wrapper"
-                    ]
-                    (monthlySpread
+                    [ Html.class "monthly-spread__days-wrapper" ]
+                    (maybeMonthlySpread
                         |> Maybe.map
                             (\monthlySpread ->
                                 List.map
@@ -258,7 +260,10 @@ view lift viewConfig model =
                             )
                         |> Maybe.withDefault [ text "" ]
                     )
-                , Lists.ol
+                , Lists.ol (lift << Mdc)
+                    -- TODO: id
+                    ""
+                    model.mdc
                     [ cs "monthly-spread__bullets-wrapper"
                     ]
                     (List.map
@@ -302,7 +307,7 @@ dayView lift monthlySpread dayOfMonth model =
         [ Html.span
             [ Html.class "monthly-spread__day__day-of-month"
             ]
-            [ text (toString dayOfMonth)
+            [ text (String.fromInt dayOfMonth)
             ]
         , Html.span
             [ Html.class "monthly-spread__day__day-of-week"
@@ -333,9 +338,9 @@ dayView lift monthlySpread dayOfMonth model =
             ]
         , TextField.view (lift << Mdc)
             ("monthly-spread__day__text-"
-                ++ toString monthlySpread.month
+                ++ String.fromInt monthlySpread.month
                 ++ "-"
-                ++ toString dayOfMonth
+                ++ String.fromInt dayOfMonth
             )
             model.mdc
             [ TextField.value value

@@ -1,6 +1,6 @@
-module View.Start exposing (..)
+module View.Start exposing (Model, Msg(..), backlogCard, bulletClass, dailyBulletsCard, defaultModel, init, inputCard, monthlyBulletsCard, subscriptions, upcomingEventsCard, update, view, viewBullet)
 
-import Date exposing (Date)
+import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes as Html
 import Html.Events
@@ -11,18 +11,18 @@ import Material.Card as Card
 import Material.Chip as Chip
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
-import Material.Textfield as TextField
-import Navigation
+import Material.TextField as TextField
 import Parse
-import Private.ObjectId as ObjectId
+import Parse.Private.ObjectId as ObjectId
+import Route exposing (Route)
 import Task exposing (Task)
+import Time
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.Bullet.Parser as Bullet
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import Url exposing (Url)
 import View
 
 
@@ -92,7 +92,7 @@ update :
     -> Msg msg
     -> Model msg
     -> ( Model msg, Cmd msg )
-update lift { today, parse } msg model =
+update lift ({ today, parse } as viewConfig) msg model =
     case msg of
         BulletCreated (Err err) ->
             -- TODO:
@@ -112,8 +112,8 @@ update lift { today, parse } msg model =
 
                 bullet =
                     Bullet.parse input
-                        |> (\bullet ->
-                                { bullet
+                        |> (\bullet_ ->
+                                { bullet_
                                     | year = Just year
                                     , month = Just month
                                     , dayOfMonth = Just dayOfMonth
@@ -148,7 +148,8 @@ update lift { today, parse } msg model =
 
         BulletClicked bullet ->
             ( model
-            , Navigation.newUrl (Url.toString (Url.EditBullet (Just bullet.objectId)))
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet (Just bullet.objectId)))
             )
 
         --        BulletClicked bullet ->
@@ -214,7 +215,7 @@ view lift ({ today } as viewConfig) model =
                                         2
 
                             createdAtSort =
-                                Date.toTime bullet.createdAt
+                                Time.posixToMillis bullet.createdAt
                         in
                         ( stateSort, createdAtSort )
                     )
@@ -248,6 +249,7 @@ inputCard lift viewConfig model =
                                     (\which ->
                                         if which == 13 then
                                             Html.Events.targetValue
+
                                         else
                                             Decode.fail ""
                                     )
@@ -307,7 +309,7 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
                             |> List.head
                             |> Maybe.map Tuple.first
                             |> Maybe.withDefault ""
-                , toString dayOfMonth
+                , String.fromInt dayOfMonth
                 ]
 
         ( year, month, dayOfMonth ) =
@@ -319,7 +321,11 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
         [ Html.h3
             [ Html.class "start__daily-bullets__title" ]
             [ text title ]
-        , Lists.ul []
+        , Lists.ul (lift << Mdc)
+            -- TODO: id
+            ""
+            model.mdc
+            []
             (List.map (viewBullet lift viewConfig model) bullets)
         ]
 
@@ -354,7 +360,11 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
         [ Html.h3
             [ Html.class "start__daily-bullets__title" ]
             [ text title ]
-        , Lists.ul []
+        , Lists.ul (lift << Mdc)
+            -- TODO: id
+            ""
+            model.mdc
+            []
             (List.map (viewBullet lift viewConfig model) bullets)
         ]
 
@@ -385,7 +395,11 @@ upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
         [ Html.h3
             [ Html.class "start__daily-bullets__title" ]
             [ text title ]
-        , Lists.ul []
+        , Lists.ul (lift << Mdc)
+            -- TODO: id
+            ""
+            model.mdc
+            []
             (List.map (viewBullet lift viewConfig model) bullets)
         ]
 
@@ -418,7 +432,11 @@ backlogCard lift ({ today } as viewConfig) model sortedBullets =
         [ Html.h3
             [ Html.class "start__daily-bullets__title" ]
             [ text title ]
-        , Lists.ul []
+        , Lists.ul (lift << Mdc)
+            -- TODO: id
+            ""
+            model.mdc
+            []
             (List.map (viewBullet lift viewConfig model) bullets)
         ]
 
@@ -450,13 +468,19 @@ viewBullet :
     -> View.Config msg
     -> Model msg
     -> Parse.Object Bullet
-    -> Html msg
+    -> Lists.ListItem msg
 viewBullet lift viewConfig model bullet =
     let
         date =
             case ( bullet.year, bullet.month, bullet.dayOfMonth ) of
                 ( Just year, Just month, Just day ) ->
-                    Just (toString day ++ ". " ++ toString month ++ " " ++ toString year)
+                    Just
+                        (String.fromInt day
+                            ++ ".\u{00A0}"
+                            ++ String.fromInt month
+                            ++ "\u{00A0}"
+                            ++ String.fromInt year
+                        )
 
                 _ ->
                     Nothing

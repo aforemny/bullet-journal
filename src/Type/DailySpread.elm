@@ -1,12 +1,12 @@
-module Type.DailySpread exposing (..)
+module Type.DailySpread exposing (DailySpread, DayOfMonth, Month, Year, canonicalDate, create, decode, delete, empty, encode, fromParseObject, get, getBy, title, update)
 
-import Date exposing (Date)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Parse
 import Parse.Decode
 import Task exposing (Task)
+import Time
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 
@@ -29,7 +29,7 @@ encode dailySpread =
 
 decode : Decoder (Parse.Object DailySpread)
 decode =
-    Decode.decode
+    Decode.succeed
         (\objectId createdAt updatedAt year month dayOfMonth ->
             { objectId = objectId
             , createdAt = createdAt
@@ -83,14 +83,14 @@ canonicalDate dailySpread =
 title : DailySpread -> String
 title dailySpread =
     String.join " "
-        [ toString dailySpread.dayOfMonth ++ "."
+        [ String.fromInt dailySpread.dayOfMonth ++ "."
         , case Calendar.defaultTimeLocale of
             Calendar.TimeLocale { months } ->
                 List.drop (dailySpread.month - 1) months
                     |> List.head
                     |> Maybe.map Tuple.first
                     |> Maybe.withDefault ""
-        , toString dailySpread.year
+        , String.fromInt dailySpread.year
         ]
 
 
@@ -112,16 +112,17 @@ getBy parse year month dayOfMonth =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "DailySpread"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "year" (Encode.int year)
-                                , Parse.equalTo "month" (Encode.int month)
-                                , Parse.equalTo "dayOfMonth" (Encode.int dayOfMonth)
-                                ]
-                        , limit = Just 1
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "year" (Encode.int year)
+                                    , Parse.equalTo "month" (Encode.int month)
+                                    , Parse.equalTo "dayOfMonth" (Encode.int dayOfMonth)
+                                    ]
+                            , limit = Just 1
+                        }
+                   )
             )
         )
         |> Task.map List.head
@@ -141,35 +142,37 @@ create parse dailySpread =
 
         dailySpreadQuery =
             Parse.emptyQuery "DailySpread"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "year" (Encode.int dailySpread.year)
-                                , Parse.equalTo "month" (Encode.int dailySpread.month)
-                                , Parse.equalTo "dayOfMonth"
-                                    (Encode.int dailySpread.dayOfMonth)
-                                ]
-                        , limit = Just 1
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "year" (Encode.int dailySpread.year)
+                                    , Parse.equalTo "month" (Encode.int dailySpread.month)
+                                    , Parse.equalTo "dayOfMonth"
+                                        (Encode.int dailySpread.dayOfMonth)
+                                    ]
+                            , limit = Just 1
+                        }
+                   )
     in
-        getExistingDailySpread
-            |> Task.andThen
-                (\existingDailySpread ->
-                    case existingDailySpread of
-                        Just dailySpread ->
-                            Task.succeed dailySpread.objectId
+    getExistingDailySpread
+        |> Task.andThen
+            (\existingDailySpread ->
+                case existingDailySpread of
+                    Just dailySpread_ ->
+                        Task.succeed dailySpread_.objectId
 
-                        Nothing ->
-                            createNewDailySpread
-                                |> Task.map .objectId
-                )
+                    Nothing ->
+                        createNewDailySpread
+                            |> Task.map .objectId
+            )
+
 
 update :
     Parse.Config
     -> Parse.ObjectId DailySpread
     -> DailySpread
-    -> Task Parse.Error { updatedAt : Date }
+    -> Task Parse.Error { updatedAt : Time.Posix }
 update parse dailySpreadId dailySpread =
     Parse.toTask parse
         (Parse.update "DailySpread" encode dailySpreadId dailySpread)

@@ -1,6 +1,5 @@
-module Type.MonthlySpread exposing (..)
+module Type.MonthlySpread exposing (DayOfMonth, Month, MonthlySpread, Year, canonicalDate, create, decode, delete, empty, encode, fromParseObject, get, getBy, title, update)
 
-import Date exposing (Date)
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
@@ -8,6 +7,7 @@ import Json.Encode as Encode
 import Parse
 import Parse.Decode
 import Task exposing (Task)
+import Time
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.Day as Day exposing (Day)
@@ -29,7 +29,7 @@ encode monthlySpread =
 
 decode : Decoder (Parse.Object MonthlySpread)
 decode =
-    Decode.decode
+    Decode.succeed
         (\objectId createdAt updatedAt year month ->
             { objectId = objectId
             , createdAt = createdAt
@@ -85,7 +85,7 @@ title monthlySpread =
                     |> List.head
                     |> Maybe.map Tuple.first
                     |> Maybe.withDefault ""
-        , toString monthlySpread.year
+        , String.fromInt monthlySpread.year
         ]
 
 
@@ -97,7 +97,6 @@ get parse objectId =
     Parse.toTask parse (Parse.get "MonthlySpread" decode objectId)
 
 
-
 getBy :
     Parse.Config
     -> Year
@@ -107,19 +106,19 @@ getBy parse year month =
     Parse.toTask parse
         (Parse.query decode
             (Parse.emptyQuery "MonthlySpread"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "year" (Encode.int year)
-                                , Parse.equalTo "month" (Encode.int month)
-                                ]
-                        , limit = Just 1
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "year" (Encode.int year)
+                                    , Parse.equalTo "month" (Encode.int month)
+                                    ]
+                            , limit = Just 1
+                        }
+                   )
             )
         )
         |> Task.map List.head
-
 
 
 create : Parse.Config -> MonthlySpread -> Task Parse.Error (Parse.ObjectId MonthlySpread)
@@ -136,34 +135,35 @@ create parse monthlySpread =
 
         monthlySpreadQuery =
             Parse.emptyQuery "MonthlySpread"
-                |> \query ->
-                    { query
-                        | whereClause =
-                            Parse.and
-                                [ Parse.equalTo "year" (Encode.int monthlySpread.year)
-                                , Parse.equalTo "month" (Encode.int monthlySpread.month)
-                                ]
-                        , limit = Just 1
-                    }
+                |> (\query ->
+                        { query
+                            | whereClause =
+                                Parse.and
+                                    [ Parse.equalTo "year" (Encode.int monthlySpread.year)
+                                    , Parse.equalTo "month" (Encode.int monthlySpread.month)
+                                    ]
+                            , limit = Just 1
+                        }
+                   )
     in
-        getExistingMonthlySpread
-            |> Task.andThen
-                (\existingMonthlySpread ->
-                    case existingMonthlySpread of
-                        Just monthlySpread ->
-                            Task.succeed monthlySpread.objectId
+    getExistingMonthlySpread
+        |> Task.andThen
+            (\existingMonthlySpread ->
+                case existingMonthlySpread of
+                    Just monthlySpread_ ->
+                        Task.succeed monthlySpread_.objectId
 
-                        Nothing ->
-                            createNewMonthlySpread
-                                |> Task.map .objectId
-                )
+                    Nothing ->
+                        createNewMonthlySpread
+                            |> Task.map .objectId
+            )
 
 
 update :
     Parse.Config
     -> Parse.ObjectId MonthlySpread
     -> MonthlySpread
-    -> Task Parse.Error { updatedAt : Date }
+    -> Task Parse.Error { updatedAt : Time.Posix }
 update parse monthlySpreadId monthlySpread =
     Parse.toTask parse
         (Parse.update "MonthlySpread" encode monthlySpreadId monthlySpread)

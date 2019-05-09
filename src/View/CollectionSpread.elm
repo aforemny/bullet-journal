@@ -1,6 +1,6 @@
-module View.CollectionSpread exposing (..)
+module View.CollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
-import Date exposing (Date)
+import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes as Html
 import Html.Events as Html
@@ -11,13 +11,13 @@ import Material.Icon as Icon
 import Material.List as Lists
 import Material.Options as Options exposing (cs, css, styled, when)
 import Material.Toolbar as Toolbar
-import Navigation
 import Parse
-import Private.ObjectId as ObjectId
+import Parse.Private.ObjectId as ObjectId
+import Route
 import Task exposing (Task)
+import Time
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import Url
 import View
 
 
@@ -95,22 +95,28 @@ update lift viewConfig msg model =
             ( { model | collectionSpread = Just collectionSpread }, Cmd.none )
 
         NewBulletClicked ->
-            ( model, Navigation.newUrl (Url.toString (Url.EditBullet Nothing)) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet Nothing))
+            )
 
         EditClicked ->
             ( model
             , model.collectionSpread
-                |> Maybe.map (Url.EditCollectionSpread << .objectId)
-                |> Maybe.map (Navigation.newUrl << Url.toString)
+                |> Maybe.map (Route.EditCollectionSpread << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
         BulletClicked bulletId ->
-            ( model, Navigation.newUrl (Url.toString (Url.EditBullet (Just bulletId))) )
+            ( model
+            , Browser.Navigation.pushUrl viewConfig.key
+                (Route.toString (Route.EditBullet (Just bulletId)))
+            )
 
         BackClicked ->
             ( model
-            , Navigation.newUrl (Url.toString Url.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
             )
 
 
@@ -176,9 +182,11 @@ view lift viewConfig model =
                     [ Html.class "collection-spread__subtitle" ]
                     [ text "Describe collection" ]
                 ]
-            , Lists.ol
-                [ cs "collection-spread__bullet-wrapper"
-                ]
+            , Lists.ol (lift << Mdc)
+                -- TODO: id
+                ""
+                model.mdc
+                [ cs "collection-spread__bullet-wrapper" ]
                 (List.map
                     (\bullet ->
                         Bullet.view
