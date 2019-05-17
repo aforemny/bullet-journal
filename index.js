@@ -12,6 +12,10 @@ var api = new ParseServer({
 
 app.use('/parse', api);
 
+app.get('/imgs/:file', function(req, res) {
+  res.sendFile(req.params.file, { root: __dirname + '/_site/imgs/' });
+});
+
 app.get('/fonts/roboto/:file', function(req, res) {
   res.sendFile(req.params.file, { root: __dirname + '/_site/fonts/roboto/' });
 });

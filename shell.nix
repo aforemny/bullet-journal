@@ -9,6 +9,7 @@ mkDerivation {
     elmPackages.elm
     gcc
     mongodb
+    nixops
     nodejs
     python
     sassc

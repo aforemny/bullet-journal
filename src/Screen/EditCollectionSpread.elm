@@ -1,4 +1,4 @@
-module View.EditCollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.EditCollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -13,11 +13,11 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
+import Screen
 import Task exposing (Task)
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import View
 
 
 type alias Model =
@@ -53,7 +53,7 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Parse.ObjectId CollectionSpread
     -> Model
     -> ( Model, Cmd msg )
@@ -71,7 +71,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -158,7 +158,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
         collectionSpread_ =
@@ -169,27 +169,28 @@ view lift viewConfig model =
                 |> Maybe.map
                     CollectionSpread.fromParseObject
     in
-    Html.div
+    [ viewConfig.topAppBar
+        { title =
+            collectionSpread
+                |> Maybe.map CollectionSpread.title
+                |> Maybe.withDefault ""
+        , menuIcon =
+            icon
+                { iconConfig
+                    | additionalAttributes =
+                        [ TopAppBar.navigationIcon
+                        , Html.Events.onClick (lift BackClicked)
+                        ]
+                }
+                "arrow_back"
+        , additionalSections =
+            []
+        }
+    , Html.div
         [ class "edit-collection-spread"
+        , viewConfig.fixedAdjust
         ]
-        [ viewConfig.toolbar
-            { title =
-                collectionSpread
-                    |> Maybe.map CollectionSpread.title
-                    |> Maybe.withDefault ""
-            , menuIcon =
-                icon
-                    { iconConfig
-                        | additionalAttributes =
-                            [ TopAppBar.navigationIcon
-                            , Html.Events.onClick (lift BackClicked)
-                            ]
-                    }
-                    "arrow_back"
-            , additionalSections =
-                []
-            }
-        , Html.div
+        [ Html.div
             [ class "edit-collection-spread__wrapper"
             ]
             [ Html.div
@@ -263,3 +264,4 @@ Do you really want to delete this collection spread?"
           else
             text ""
         ]
+    ]

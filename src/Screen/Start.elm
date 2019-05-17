@@ -1,4 +1,4 @@
-module View.Start exposing (Model, Msg(..), backlogCard, bulletClass, dailyBulletsCard, defaultModel, init, inputCard, monthlyBulletsCard, subscriptions, upcomingEventsCard, update, view, viewBullet)
+module Screen.Start exposing (Model, Msg(..), backlogCard, bulletClass, dailyBulletsCard, defaultModel, init, inputCard, monthlyBulletsCard, subscriptions, upcomingEventsCard, update, view, viewBullet)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -14,6 +14,7 @@ import Material.TextField exposing (textField, textFieldConfig)
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route exposing (Route)
+import Screen
 import Task exposing (Task)
 import Time
 import Time.Calendar.Gregorian as Calendar
@@ -22,7 +23,6 @@ import Type.Bullet as Bullet exposing (Bullet)
 import Type.Bullet.Parser as Bullet
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import View
 
 
 type alias Model =
@@ -48,7 +48,7 @@ type Msg msg
     | BulletMarkedDone (Result Parse.Error (Parse.ObjectId Bullet))
 
 
-init : (Msg msg -> msg) -> View.Config msg -> Model -> ( Model, Cmd msg )
+init : (Msg msg -> msg) -> Screen.Config msg -> Model -> ( Model, Cmd msg )
 init lift { today, parse } model =
     let
         ( year, month, dayOfMonth ) =
@@ -84,7 +84,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -181,7 +181,7 @@ update lift ({ today, parse } as viewConfig) msg model =
             ( model, Cmd.none )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift ({ today } as viewConfig) model =
     let
         sortedBullets =
@@ -213,8 +213,9 @@ view lift ({ today } as viewConfig) model =
                         ( stateSort, createdAtSort )
                     )
     in
-    Html.div
+    [ Html.div
         [ class "start"
+        , viewConfig.fixedAdjust
         ]
         [ inputCard lift viewConfig model
         , dailyBulletsCard lift viewConfig model sortedBullets
@@ -222,6 +223,7 @@ view lift ({ today } as viewConfig) model =
         , upcomingEventsCard lift viewConfig model sortedBullets
         , backlogCard lift viewConfig model sortedBullets
         ]
+    ]
 
 
 inputCard lift viewConfig model =
@@ -463,7 +465,7 @@ bulletClass bullet =
 
 viewBullet :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Model
     -> Parse.Object Bullet
     -> Html msg

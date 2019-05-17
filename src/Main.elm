@@ -14,6 +14,16 @@ import Parse.Private.ObjectId as ObjectId
 import ParseConfig exposing (parseConfig)
 import Ports
 import Route exposing (Route)
+import Screen
+import Screen.CollectionSpread
+import Screen.DailySpread
+import Screen.EditBullet
+import Screen.EditCollectionSpread
+import Screen.EditDailySpread
+import Screen.EditMonthlySpread
+import Screen.Index
+import Screen.MonthlySpread
+import Screen.Start
 import Task exposing (Task)
 import Time
 import Time.Calendar.Days as Calendar
@@ -24,30 +34,20 @@ import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import Url exposing (Url)
-import View
-import View.CollectionSpread
-import View.DailySpread
-import View.EditBullet
-import View.EditCollectionSpread
-import View.EditDailySpread
-import View.EditMonthlySpread
-import View.Index
-import View.MonthlySpread
-import View.Start
 
 
 type alias Model =
     { key : Browser.Navigation.Key
     , url : Route
-    , collectionSpread : View.CollectionSpread.Model
-    , dailySpread : View.DailySpread.Model
-    , index : View.Index.Model
-    , monthlySpread : View.MonthlySpread.Model
-    , editCollectionSpread : View.EditCollectionSpread.Model
-    , editDailySpread : View.EditDailySpread.Model
-    , editMonthlySpread : View.EditMonthlySpread.Model
-    , editBullet : Maybe View.EditBullet.Model
-    , start : View.Start.Model
+    , collectionSpread : Screen.CollectionSpread.Model
+    , dailySpread : Screen.DailySpread.Model
+    , index : Screen.Index.Model
+    , monthlySpread : Screen.MonthlySpread.Model
+    , editCollectionSpread : Screen.EditCollectionSpread.Model
+    , editDailySpread : Screen.EditDailySpread.Model
+    , editMonthlySpread : Screen.EditMonthlySpread.Model
+    , editBullet : Maybe Screen.EditBullet.Model
+    , start : Screen.Start.Model
     , today : Calendar.Day
     , now : Time.Posix
     , error : Maybe Parse.Error
@@ -58,15 +58,15 @@ type alias Model =
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
     { url = Route.Index
-    , collectionSpread = View.CollectionSpread.defaultModel
-    , dailySpread = View.DailySpread.defaultModel
-    , index = View.Index.defaultModel
-    , monthlySpread = View.MonthlySpread.defaultModel
-    , editMonthlySpread = View.EditMonthlySpread.defaultModel
-    , editCollectionSpread = View.EditCollectionSpread.defaultModel
-    , editDailySpread = View.EditDailySpread.defaultModel
+    , collectionSpread = Screen.CollectionSpread.defaultModel
+    , dailySpread = Screen.DailySpread.defaultModel
+    , index = Screen.Index.defaultModel
+    , monthlySpread = Screen.MonthlySpread.defaultModel
+    , editMonthlySpread = Screen.EditMonthlySpread.defaultModel
+    , editCollectionSpread = Screen.EditCollectionSpread.defaultModel
+    , editDailySpread = Screen.EditDailySpread.defaultModel
     , editBullet = Nothing
-    , start = View.Start.defaultModel
+    , start = Screen.Start.defaultModel
     , today = Calendar.fromGregorian 1970 1 1
     , now = Time.millisToPosix 0
     , error = Nothing
@@ -80,15 +80,15 @@ type Msg
     | TodayChanged (Maybe Calendar.Day)
     | NowChanged (Maybe Time.Posix)
     | BackClicked
-    | EditBulletMsg (View.EditBullet.Msg Msg)
-    | CollectionSpreadMsg (View.CollectionSpread.Msg Msg)
-    | DailySpreadMsg (View.DailySpread.Msg Msg)
-    | IndexMsg (View.Index.Msg Msg)
-    | StartMsg (View.Start.Msg Msg)
-    | MonthlySpreadMsg (View.MonthlySpread.Msg Msg)
-    | EditCollectionSpreadMsg (View.EditCollectionSpread.Msg Msg)
-    | EditDailySpreadMsg (View.EditDailySpread.Msg Msg)
-    | EditMonthlySpreadMsg (View.EditMonthlySpread.Msg Msg)
+    | EditBulletMsg (Screen.EditBullet.Msg Msg)
+    | CollectionSpreadMsg (Screen.CollectionSpread.Msg Msg)
+    | DailySpreadMsg (Screen.DailySpread.Msg Msg)
+    | IndexMsg (Screen.Index.Msg Msg)
+    | StartMsg (Screen.Start.Msg Msg)
+    | MonthlySpreadMsg (Screen.MonthlySpread.Msg Msg)
+    | EditCollectionSpreadMsg (Screen.EditCollectionSpread.Msg Msg)
+    | EditDailySpreadMsg (Screen.EditDailySpread.Msg Msg)
+    | EditMonthlySpreadMsg (Screen.EditMonthlySpread.Msg Msg)
     | TodayClicked
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | MonthClicked
@@ -121,8 +121,8 @@ init flags url_ key =
         url =
             Route.fromUrl url_
 
-        viewConfig =
-            makeViewConfig model
+        screenConfig =
+            makeScreenConfig model
 
         model =
             defaultModel key
@@ -139,7 +139,7 @@ init flags url_ key =
                    )
     in
     ( model, Cmd.none )
-        |> initView viewConfig url
+        |> andThenInitScreen screenConfig url
 
 
 subscriptions : Model -> Sub Msg
@@ -147,34 +147,34 @@ subscriptions model =
     Sub.batch
         [ Ports.today TodayChanged
         , Ports.now NowChanged
-        , View.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
-        , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
-        , View.Index.subscriptions IndexMsg model.index
-        , View.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
-        , View.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
-        , View.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
-        , View.Start.subscriptions StartMsg model.start
-        , View.EditDailySpread.subscriptions EditDailySpreadMsg model.editDailySpread
+        , Screen.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
+        , Screen.DailySpread.subscriptions DailySpreadMsg model.dailySpread
+        , Screen.Index.subscriptions IndexMsg model.index
+        , Screen.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
+        , Screen.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
+        , Screen.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
+        , Screen.Start.subscriptions StartMsg model.start
+        , Screen.EditDailySpread.subscriptions EditDailySpreadMsg model.editDailySpread
         , model.editBullet
-            |> Maybe.map (View.EditBullet.subscriptions EditBulletMsg)
+            |> Maybe.map (Screen.EditBullet.subscriptions EditBulletMsg)
             |> Maybe.withDefault Sub.none
         ]
 
 
-initView : View.Config Msg -> Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-initView viewConfig url ( model, cmd ) =
+andThenInitScreen : Screen.Config Msg -> Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+andThenInitScreen screenConfig url ( model, cmd ) =
     (case url of
         Route.Start ->
-            View.Start.init StartMsg viewConfig model.start
+            Screen.Start.init StartMsg screenConfig model.start
                 |> Tuple.mapFirst (\start -> { model | start = start })
 
         Route.Index ->
-            View.Index.init IndexMsg viewConfig model.index
+            Screen.Index.init IndexMsg screenConfig model.index
                 |> Tuple.mapFirst (\index -> { model | index = index })
 
         Route.MonthlySpread objectId ->
-            View.MonthlySpread.init MonthlySpreadMsg
-                viewConfig
+            Screen.MonthlySpread.init MonthlySpreadMsg
+                screenConfig
                 objectId
                 model.monthlySpread
                 |> Tuple.mapFirst
@@ -183,9 +183,9 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.DailySpread objectId ->
-            View.DailySpread.init
+            Screen.DailySpread.init
                 DailySpreadMsg
-                viewConfig
+                screenConfig
                 objectId
                 model.dailySpread
                 |> Tuple.mapFirst
@@ -194,8 +194,8 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.CollectionSpread objectId ->
-            View.CollectionSpread.init CollectionSpreadMsg
-                viewConfig
+            Screen.CollectionSpread.init CollectionSpreadMsg
+                screenConfig
                 objectId
                 model.collectionSpread
                 |> Tuple.mapFirst
@@ -204,8 +204,8 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.EditMonthlySpread objectId ->
-            View.EditMonthlySpread.init EditMonthlySpreadMsg
-                viewConfig
+            Screen.EditMonthlySpread.init EditMonthlySpreadMsg
+                screenConfig
                 objectId
                 model.editMonthlySpread
                 |> Tuple.mapFirst
@@ -214,9 +214,9 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.EditDailySpread objectId ->
-            View.EditDailySpread.init
+            Screen.EditDailySpread.init
                 EditDailySpreadMsg
-                viewConfig
+                screenConfig
                 objectId
                 model.editDailySpread
                 |> Tuple.mapFirst
@@ -225,8 +225,8 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.EditCollectionSpread objectId ->
-            View.EditCollectionSpread.init EditCollectionSpreadMsg
-                viewConfig
+            Screen.EditCollectionSpread.init EditCollectionSpreadMsg
+                screenConfig
                 objectId
                 model.editCollectionSpread
                 |> Tuple.mapFirst
@@ -235,8 +235,8 @@ initView viewConfig url ( model, cmd ) =
                     )
 
         Route.EditBullet bulletId ->
-            View.EditBullet.init EditBulletMsg
-                viewConfig
+            Screen.EditBullet.init EditBulletMsg
+                screenConfig
                 -- TODO:
                 Route.Start
                 bulletId
@@ -258,8 +258,8 @@ initView viewConfig url ( model, cmd ) =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        viewConfig =
-            makeViewConfig model
+        screenConfig =
+            makeScreenConfig model
     in
     case msg of
         NoOp ->
@@ -267,55 +267,55 @@ update msg model =
 
         MonthlySpreadMsg msg_ ->
             model.monthlySpread
-                |> View.MonthlySpread.update MonthlySpreadMsg viewConfig msg_
+                |> Screen.MonthlySpread.update MonthlySpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\monthlySpread -> { model | monthlySpread = monthlySpread })
 
         DailySpreadMsg msg_ ->
             model.dailySpread
-                |> View.DailySpread.update DailySpreadMsg viewConfig msg_
+                |> Screen.DailySpread.update DailySpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\dailySpread -> { model | dailySpread = dailySpread })
 
         CollectionSpreadMsg msg_ ->
             model.collectionSpread
-                |> View.CollectionSpread.update CollectionSpreadMsg viewConfig msg_
+                |> Screen.CollectionSpread.update CollectionSpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\collectionSpread -> { model | collectionSpread = collectionSpread })
 
         EditMonthlySpreadMsg msg_ ->
             model.editMonthlySpread
-                |> View.EditMonthlySpread.update EditMonthlySpreadMsg viewConfig msg_
+                |> Screen.EditMonthlySpread.update EditMonthlySpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\editMonthlySpread -> { model | editMonthlySpread = editMonthlySpread })
 
         EditDailySpreadMsg msg_ ->
             model.editDailySpread
-                |> View.EditDailySpread.update EditDailySpreadMsg viewConfig msg_
+                |> Screen.EditDailySpread.update EditDailySpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\editDailySpread -> { model | editDailySpread = editDailySpread })
 
         EditCollectionSpreadMsg msg_ ->
             model.editCollectionSpread
-                |> View.EditCollectionSpread.update EditCollectionSpreadMsg viewConfig msg_
+                |> Screen.EditCollectionSpread.update EditCollectionSpreadMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\editCollectionSpread -> { model | editCollectionSpread = editCollectionSpread })
 
         IndexMsg msg_ ->
             model.index
-                |> View.Index.update IndexMsg viewConfig msg_
+                |> Screen.Index.update IndexMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\index -> { model | index = index })
 
         StartMsg msg_ ->
             model.start
-                |> View.Start.update StartMsg viewConfig msg_
+                |> Screen.Start.update StartMsg screenConfig msg_
                 |> Tuple.mapFirst
                     (\start -> { model | start = start })
 
         EditBulletMsg msg_ ->
             model.editBullet
-                |> Maybe.map (View.EditBullet.update EditBulletMsg viewConfig msg_)
+                |> Maybe.map (Screen.EditBullet.update EditBulletMsg screenConfig msg_)
                 |> Maybe.map
                     (Tuple.mapFirst
                         (\editBullet -> { model | editBullet = Just editBullet })
@@ -344,7 +344,7 @@ update msg model =
             in
             ( model
             , Task.attempt TodayClickedResult
-                (DailySpread.getBy viewConfig.parse year month dayOfMonth
+                (DailySpread.getBy screenConfig.parse year month dayOfMonth
                     |> Task.andThen
                         (\dailySpread_ ->
                             case dailySpread_ of
@@ -352,7 +352,7 @@ update msg model =
                                     Task.succeed dailySpread.objectId
 
                                 Nothing ->
-                                    DailySpread.create viewConfig.parse
+                                    DailySpread.create screenConfig.parse
                                         (DailySpread.empty year month dayOfMonth)
                         )
                 )
@@ -374,7 +374,7 @@ update msg model =
             in
             ( model
             , Task.attempt MonthClickedResult
-                (MonthlySpread.getBy viewConfig.parse year month
+                (MonthlySpread.getBy screenConfig.parse year month
                     |> Task.andThen
                         (\dailySpread_ ->
                             case dailySpread_ of
@@ -382,7 +382,7 @@ update msg model =
                                     Task.succeed dailySpread.objectId
 
                                 Nothing ->
-                                    MonthlySpread.create viewConfig.parse
+                                    MonthlySpread.create screenConfig.parse
                                         (MonthlySpread.empty year month)
                         )
                 )
@@ -409,11 +409,11 @@ update msg model =
             ( { model | url = Route.fromUrl url }, Cmd.none )
 
 
-makeViewConfig : Model -> View.Config Msg
-makeViewConfig model =
-    { toolbar =
+makeScreenConfig : Model -> Screen.Config Msg
+makeScreenConfig model =
+    { topAppBar =
         \config ->
-            topAppBar topAppBarConfig
+            topAppBar { topAppBarConfig | fixed = True }
                 [ TopAppBar.row []
                     (List.concat
                         [ [ TopAppBar.section [ TopAppBar.alignStart ]
@@ -438,6 +438,7 @@ makeViewConfig model =
                         ]
                     )
                 ]
+    , fixedAdjust = TopAppBar.fixedAdjust
     , today = model.today
     , now = model.now
     , parse = parseConfig
@@ -448,100 +449,98 @@ makeViewConfig model =
 
 view model =
     let
-        viewConfig =
-            makeViewConfig model
+        screenConfig =
+            makeScreenConfig model
     in
     { title = "Bujo"
     , body =
-        [ Html.div
-            [ class "main"
-            , TopAppBar.fixedAdjust
-            ]
-            [ case model.url of
+        [ Html.div [ class "main" ]
+            (case model.url of
                 Route.Start ->
-                    viewStart viewConfig model
+                    viewStart screenConfig model
 
                 Route.Index ->
-                    viewIndex viewConfig model
+                    viewIndex screenConfig model
 
                 Route.MonthlySpread objectId ->
-                    viewMonthlySpread viewConfig model
+                    viewMonthlySpread screenConfig model
 
                 Route.DailySpread objectId ->
-                    viewDailySpread viewConfig model
+                    viewDailySpread screenConfig model
 
                 Route.CollectionSpread objectId ->
-                    viewCollectionSpread viewConfig model
+                    viewCollectionSpread screenConfig model
 
                 Route.EditMonthlySpread objectId ->
-                    viewEditMonthlySpread viewConfig model
+                    viewEditMonthlySpread screenConfig model
 
                 Route.EditDailySpread objectId ->
-                    viewEditDailySpread viewConfig model
+                    viewEditDailySpread screenConfig model
 
                 Route.EditCollectionSpread objectId ->
-                    viewEditCollectionSpread viewConfig model
+                    viewEditCollectionSpread screenConfig model
 
                 Route.NotFound urlString ->
-                    viewNotFound viewConfig urlString model
+                    viewNotFound screenConfig urlString model
 
                 Route.EditBullet _ ->
-                    viewEditBullet viewConfig model
-            ]
+                    viewEditBullet screenConfig model
+            )
         ]
     }
 
 
-viewMonthlySpread : View.Config Msg -> Model -> Html Msg
-viewMonthlySpread viewConfig model =
-    View.MonthlySpread.view MonthlySpreadMsg viewConfig model.monthlySpread
+viewMonthlySpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewMonthlySpread screenConfig model =
+    Screen.MonthlySpread.view MonthlySpreadMsg screenConfig model.monthlySpread
 
 
-viewDailySpread : View.Config Msg -> Model -> Html Msg
-viewDailySpread viewConfig model =
-    View.DailySpread.view DailySpreadMsg viewConfig model.dailySpread
+viewDailySpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewDailySpread screenConfig model =
+    Screen.DailySpread.view DailySpreadMsg screenConfig model.dailySpread
 
 
-viewCollectionSpread : View.Config Msg -> Model -> Html Msg
-viewCollectionSpread viewConfig model =
-    View.CollectionSpread.view CollectionSpreadMsg viewConfig model.collectionSpread
+viewCollectionSpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewCollectionSpread screenConfig model =
+    Screen.CollectionSpread.view CollectionSpreadMsg screenConfig model.collectionSpread
 
 
-viewEditMonthlySpread : View.Config Msg -> Model -> Html Msg
-viewEditMonthlySpread viewConfig model =
-    View.EditMonthlySpread.view EditMonthlySpreadMsg viewConfig model.editMonthlySpread
+viewEditMonthlySpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewEditMonthlySpread screenConfig model =
+    Screen.EditMonthlySpread.view EditMonthlySpreadMsg screenConfig model.editMonthlySpread
 
 
-viewEditDailySpread : View.Config Msg -> Model -> Html Msg
-viewEditDailySpread viewConfig model =
-    View.EditDailySpread.view EditDailySpreadMsg viewConfig model.editDailySpread
+viewEditDailySpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewEditDailySpread screenConfig model =
+    Screen.EditDailySpread.view EditDailySpreadMsg screenConfig model.editDailySpread
 
 
-viewEditCollectionSpread : View.Config Msg -> Model -> Html Msg
-viewEditCollectionSpread viewConfig model =
-    View.EditCollectionSpread.view EditCollectionSpreadMsg
-        viewConfig
+viewEditCollectionSpread : Screen.Config Msg -> Model -> List (Html Msg)
+viewEditCollectionSpread screenConfig model =
+    Screen.EditCollectionSpread.view EditCollectionSpreadMsg
+        screenConfig
         model.editCollectionSpread
 
 
-viewNotFound : View.Config Msg -> String -> Model -> Html Msg
-viewNotFound viewConfig urlString model =
-    Html.div [ class "not-found" ]
+viewNotFound : Screen.Config Msg -> String -> Model -> List (Html Msg)
+viewNotFound screenConfig urlString model =
+    [ Html.div [ class "not-found" ]
         [ text ("URL not found: " ++ urlString) ]
+    ]
 
 
-viewIndex : View.Config Msg -> Model -> Html Msg
-viewIndex viewConfig model =
-    View.Index.view IndexMsg viewConfig model.index
+viewIndex : Screen.Config Msg -> Model -> List (Html Msg)
+viewIndex screenConfig model =
+    Screen.Index.view IndexMsg screenConfig model.index
 
 
-viewStart : View.Config Msg -> Model -> Html Msg
-viewStart viewConfig model =
-    View.Start.view StartMsg viewConfig model.start
+viewStart : Screen.Config Msg -> Model -> List (Html Msg)
+viewStart screenConfig model =
+    Screen.Start.view StartMsg screenConfig model.start
 
 
-viewEditBullet : View.Config Msg -> Model -> Html Msg
-viewEditBullet viewConfig model =
+viewEditBullet : Screen.Config Msg -> Model -> List (Html Msg)
+viewEditBullet screenConfig model =
     model.editBullet
-        |> Maybe.map (View.EditBullet.view EditBulletMsg viewConfig)
-        |> Maybe.withDefault (text "")
+        |> Maybe.map (Screen.EditBullet.view EditBulletMsg screenConfig)
+        |> Maybe.withDefault []

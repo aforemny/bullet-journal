@@ -1,4 +1,4 @@
-module View exposing (Config, ToolbarConfig)
+module Screen exposing (Config, ToolbarConfig)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -8,7 +8,8 @@ import Time.Calendar.Days as Calendar
 
 
 type alias Config msg =
-    { toolbar : ToolbarConfig msg -> Html msg
+    { topAppBar : ToolbarConfig msg -> Html msg
+    , fixedAdjust : Html.Attribute msg
     , today : Calendar.Day
     , now : Time.Posix
     , parse : Parse.Config

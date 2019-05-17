@@ -1,0 +1,56 @@
+@import "normalize.css/normalize";
+@import "material-design-icons/iconfont/material-icons";
+@import "roboto-fontface/css/roboto/roboto-fontface";
+
+@import "material-components-web/material-components-web";
+
+@mixin mobile {
+  @media (max-width: 720px) {
+    @content
+  }
+}
+
+@import "bullet";
+@import "collection-spread";
+@import "daily-spread";
+@import "edit-bullet";
+@import "edit-collection-spread";
+@import "edit-daily-spread";
+@import "edit-monthly-spread";
+@import "monthly-spread";
+@import "start";
+@import "table-of-contents";
+
+
+html, body {
+  min-height: 100%;
+  display: flex;
+  flex-flow: row wrap;
+}
+
+body {
+  flex: 1 1 100%;
+  align-self: stretch;
+  margin: 0;
+}
+
+.main {
+  display: flex;
+  flex-flow: row wrap;
+  width: 1140px;
+  max-width: calc(100% - 60px);
+  margin-left: auto;
+  margin-right: auto;
+
+  @include mobile {
+    margin: 0;
+    max-width: 100%;
+  }
+}
+
+.mdc-toolbar {
+  .mdc-button {
+    @include mdc-theme-prop(color, text-primary-on-dark);
+    align-self: center;
+  }
+}

@@ -1,4 +1,4 @@
-module View.Index exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
+module Screen.Index exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -13,6 +13,7 @@ import Material.List exposing (list, listConfig, listItem, listItemConfig, listI
 import Material.TopAppBar as TopAppBar
 import Parse
 import Route
+import Screen
 import Task exposing (Task)
 import Time
 import Time.Calendar.Gregorian as Calendar
@@ -20,7 +21,6 @@ import Time.Format.Locale as Calendar
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import Type.DailySpread as DailySpread exposing (DailySpread)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import View
 
 
 type alias Model =
@@ -59,7 +59,7 @@ type Msg msg
     | NewCollectionSpreadClickedResult (Result Parse.Error (Parse.ObjectId CollectionSpread))
 
 
-init : (Msg msg -> msg) -> View.Config msg -> Model -> ( Model, Cmd msg )
+init : (Msg msg -> msg) -> Screen.Config msg -> Model -> ( Model, Cmd msg )
 init lift viewConfig model =
     ( { defaultModel
         | monthlySpreads = model.monthlySpreads
@@ -87,7 +87,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -199,7 +199,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
         monthlySpreads =
@@ -262,17 +262,15 @@ view lift viewConfig model =
                 )
                 model.collectionSpreads
     in
-    Html.div
-        [ class "index"
-        ]
-        [ viewConfig.toolbar
-            { title = "Index"
-            , menuIcon =
-                icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
-                    "menu"
-            , additionalSections = []
-            }
-        , card
+    [ viewConfig.topAppBar
+        { title = "Index"
+        , menuIcon =
+            icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
+                "menu"
+        , additionalSections = []
+        }
+    , Html.div [ class "index", viewConfig.fixedAdjust ]
+        [ card
             { cardConfig
                 | additionalAttributes =
                     [ class "index__wrapper" ]
@@ -314,9 +312,10 @@ view lift viewConfig model =
             }
         , newSpreadDialog lift viewConfig model
         ]
+    ]
 
 
-newSpreadDialog : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+newSpreadDialog : (Msg msg -> msg) -> Screen.Config msg -> Model -> Html msg
 newSpreadDialog lift viewConfig model =
     let
         ( year, month, dayOfMonth ) =

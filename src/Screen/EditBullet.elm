@@ -1,4 +1,4 @@
-module View.EditBullet exposing (Model, Msg(..), Tipe(..), bulletDelete, bulletForm, defaultModel, deleteBullet, init, subscriptions, update, view)
+module Screen.EditBullet exposing (Model, Msg(..), Tipe(..), bulletDelete, bulletForm, defaultModel, deleteBullet, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -15,10 +15,10 @@ import Parse
 import Parse.Private.ObjectId as ObjectId
 import Parse.Private.Pointer as Pointer
 import Route exposing (Route)
+import Screen
 import Task
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
-import View
 
 
 type alias Model =
@@ -86,7 +86,7 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Route
     -> Maybe (Parse.ObjectId Bullet)
     -> Maybe Model
@@ -107,7 +107,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -262,10 +262,29 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
-    Html.div
+    [ viewConfig.topAppBar
+        { title =
+            if model.bulletId /= Nothing then
+                "Edit bullet"
+
+            else
+                "New bullet"
+        , menuIcon =
+            icon
+                { iconConfig
+                    | additionalAttributes =
+                        [ TopAppBar.navigationIcon
+                        , Html.Events.onClick (lift BackClicked)
+                        ]
+                }
+                "arrow_back"
+        , additionalSections = []
+        }
+    , Html.div
         [ class "edit-bullet"
+        , viewConfig.fixedAdjust
         , case model.tipe of
             Task ->
                 class "edit-bullet--tipe-task"
@@ -289,23 +308,7 @@ view lift viewConfig model =
             , bulletDelete lift model
             ]
         ]
-
-
-
---          viewConfig.toolbar
---            { title =
---                if model.bulletId /= Nothing then
---                    "Edit bullet"
---                else
---                    "New bullet"
---            , menuIcon =
---                Icon.view
---                    [ Toolbar.menuIcon
---                    , Html.Events.onClick (lift BackClicked)
---                    ]
---                    "arrow_back"
---            , additionalSections = []
---            }
+    ]
 
 
 bulletForm lift model =

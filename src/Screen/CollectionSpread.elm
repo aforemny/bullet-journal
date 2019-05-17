@@ -1,4 +1,4 @@
-module View.CollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.CollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -12,11 +12,11 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
+import Screen
 import Task exposing (Task)
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import View
 
 
 type alias Model =
@@ -45,7 +45,7 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Parse.ObjectId CollectionSpread
     -> Model
     -> ( Model, Cmd msg )
@@ -67,7 +67,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -111,7 +111,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
         collectionSpread_ =
@@ -127,36 +127,36 @@ view lift viewConfig model =
                 |> Maybe.map CollectionSpread.title
                 |> Maybe.withDefault "Collection"
     in
-    Html.div
+    [ viewConfig.topAppBar
+        { title = title
+        , menuIcon =
+            icon
+                { iconConfig
+                    | additionalAttributes =
+                        [ TopAppBar.navigationIcon
+                        , Html.Events.onClick (lift BackClicked)
+                        ]
+                }
+                "arrow_back"
+        , additionalSections =
+            [ TopAppBar.section [ TopAppBar.alignEnd ]
+                [ textButton
+                    { buttonConfig
+                        | onClick = Just (lift EditClicked)
+                    }
+                    "Edit"
+                , textButton
+                    { buttonConfig
+                        | onClick = Just (lift NewBulletClicked)
+                    }
+                    "New bullet"
+                ]
+            ]
+        }
+    , Html.div
         [ class "collection-spread"
         ]
-        [ viewConfig.toolbar
-            { title = title
-            , menuIcon =
-                icon
-                    { iconConfig
-                        | additionalAttributes =
-                            [ TopAppBar.navigationIcon
-                            , Html.Events.onClick (lift BackClicked)
-                            ]
-                    }
-                    "arrow_back"
-            , additionalSections =
-                [ TopAppBar.section [ TopAppBar.alignEnd ]
-                    [ textButton
-                        { buttonConfig
-                            | onClick = Just (lift EditClicked)
-                        }
-                        "Edit"
-                    , textButton
-                        { buttonConfig
-                            | onClick = Just (lift NewBulletClicked)
-                        }
-                        "New bullet"
-                    ]
-                ]
-            }
-        , card
+        [ card
             { cardConfig
                 | additionalAttributes =
                     [ class "collection-spread__wrapper" ]
@@ -195,3 +195,4 @@ view lift viewConfig model =
             , actions = Nothing
             }
         ]
+    ]

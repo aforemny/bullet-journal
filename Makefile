@@ -1,18 +1,25 @@
 PREFIX = _site
 
 
-build: node_modules
-	mkdir -p $(PREFIX)/fonts
-	elm make src/Main.elm --output $(PREFIX)/elm.js
-	cp page.html $(PREFIX)/index.html
-	cp node_modules/normalize.css/normalize.css $(PREFIX)/
-	cp node_modules/material-design-icons/iconfont/material-icons.css $(PREFIX)/
+install: build
+	mkdir -p $(PREFIX)
+	cp src/index.html $(PREFIX)/index.html
 	cp node_modules/material-design-icons/iconfont/MaterialIcons-Regular.* $(PREFIX)/
-	cp node_modules/roboto-fontface/css/roboto/roboto-fontface.css $(PREFIX)/
+	mkdir -p $(PREFIX)/fonts
 	cp -r node_modules/roboto-fontface/fonts/roboto $(PREFIX)/fonts/
-	sassc -I node_modules src/main.scss > site.css
-	./node_modules/.bin/postcss site.css --use autoprefixer > $(PREFIX)/site.css
 	rsync -r imgs $(PREFIX)
+	cp src/elm.js $(PREFIX)/elm.js
+	cp src/index.css $(PREFIX)/index.css
+
+build: src/elm.js src/index.css
+
+
+src/elm.js: src/*.elm src/**/*.elm
+	elm make src/Main.elm --output src/elm.js
+
+
+src/index.css: src/*.scss node_modules
+	sassc -I node_modules src/index.scss | ./node_modules/.bin/postcss --use autoprefixer > src/index.css
 
 
 node_modules:
@@ -22,6 +29,7 @@ node_modules:
 clean:
 	rm -rf elm-stuff/build-artifacts
 	rm -rf $(PREFIX)
+	rm -f src/index.css src/elm.js
 
 
 distclean: clean

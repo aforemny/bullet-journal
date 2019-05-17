@@ -1,10 +1,10 @@
-module View.EditMonthlySpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.EditDailySpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes exposing (class, style)
 import Html.Events
-import Material.Button exposing (buttonConfig, textButton)
+import Material.Button exposing (buttonConfig, raisedButton)
 import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
 import Material.Icon exposing (icon, iconConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig)
@@ -13,34 +13,36 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
+import Screen
 import Task exposing (Task)
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import View
+import Type.DailySpread as DailySpread exposing (DailySpread)
 
 
 type alias Model =
-    { monthlySpread : Maybe (Parse.Object MonthlySpread)
+    { dailySpread : Maybe (Parse.Object DailySpread)
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
     , year : String
     , month : String
+    , dayOfMonth : String
     }
 
 
 defaultModel : Model
 defaultModel =
-    { monthlySpread = Nothing
+    { dailySpread = Nothing
     , error = Nothing
     , showConfirmDeleteDialog = False
     , year = ""
     , month = ""
+    , dayOfMonth = ""
     }
 
 
 type Msg msg
-    = MonthlySpreadResult (Result Parse.Error (Parse.Object MonthlySpread))
+    = DailySpreadResult (Result Parse.Error (Parse.Object DailySpread))
     | BackClicked
     | DeleteClicked
     | ConfirmDeleteDialogClosed
@@ -49,6 +51,7 @@ type Msg msg
     | DeleteResult (Result Parse.Error {})
     | MonthChanged String
     | YearChanged String
+    | DayOfMonthChanged String
     | SaveClicked
     | SaveResult (Result Parse.Error { updatedAt : Time.Posix })
     | CancelClicked
@@ -56,15 +59,15 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> View.Config msg
-    -> Parse.ObjectId MonthlySpread
+    -> Screen.Config msg
+    -> Parse.ObjectId DailySpread
     -> Model
     -> ( Model, Cmd msg )
 init lift viewConfig objectId model =
     ( defaultModel
     , Cmd.batch
-        [ Task.attempt (lift << MonthlySpreadResult)
-            (MonthlySpread.get viewConfig.parse objectId)
+        [ Task.attempt (lift << DailySpreadResult)
+            (DailySpread.get viewConfig.parse objectId)
         ]
     )
 
@@ -76,20 +79,21 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        MonthlySpreadResult (Err err) ->
+        DailySpreadResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
-        MonthlySpreadResult (Ok monthlySpread) ->
+        DailySpreadResult (Ok dailySpread) ->
             ( { model
-                | monthlySpread = Just monthlySpread
-                , year = String.fromInt monthlySpread.year
-                , month = String.fromInt monthlySpread.month
+                | dailySpread = Just dailySpread
+                , year = String.fromInt dailySpread.year
+                , month = String.fromInt dailySpread.month
+                , dayOfMonth = String.fromInt dailySpread.dayOfMonth
               }
             , Cmd.none
             )
@@ -110,8 +114,8 @@ update lift viewConfig msg model =
 
         ConfirmDeleteClicked ->
             ( model
-            , model.monthlySpread
-                |> Maybe.map (MonthlySpread.delete viewConfig.parse << .objectId)
+            , model.dailySpread
+                |> Maybe.map (DailySpread.delete viewConfig.parse << .objectId)
                 |> Maybe.map (Task.attempt (lift << DeleteResult))
                 |> Maybe.withDefault Cmd.none
             )
@@ -127,28 +131,34 @@ update lift viewConfig msg model =
         YearChanged year ->
             ( { model | year = year }, Cmd.none )
 
+        DayOfMonthChanged dayOfMonth ->
+            ( { model | dayOfMonth = dayOfMonth }, Cmd.none )
+
         MonthChanged month ->
             ( { model | month = month }, Cmd.none )
 
         SaveClicked ->
             ( model
-            , model.monthlySpread
+            , model.dailySpread
                 |> Maybe.map
-                    (\monthlySpread ->
-                        { monthlySpread
+                    (\dailySpread ->
+                        { dailySpread
                             | year =
                                 String.toInt model.year
-                                    |> Maybe.withDefault monthlySpread.year
+                                    |> Maybe.withDefault dailySpread.year
                             , month =
                                 String.toInt model.month
-                                    |> Maybe.withDefault monthlySpread.month
+                                    |> Maybe.withDefault dailySpread.month
+                            , dayOfMonth =
+                                String.toInt model.dayOfMonth
+                                    |> Maybe.withDefault dailySpread.dayOfMonth
                         }
                     )
                 |> Maybe.map
-                    (\monthlySpread ->
-                        MonthlySpread.update viewConfig.parse
-                            monthlySpread.objectId
-                            (MonthlySpread.fromParseObject monthlySpread)
+                    (\dailySpread ->
+                        DailySpread.update viewConfig.parse
+                            dailySpread.objectId
+                            (DailySpread.fromParseObject dailySpread)
                     )
                 |> Maybe.map (Task.attempt (lift << SaveResult))
                 |> Maybe.withDefault Cmd.none
@@ -159,57 +169,58 @@ update lift viewConfig msg model =
 
         SaveResult (Ok _) ->
             ( model
-            , model.monthlySpread
-                |> Maybe.map (Route.MonthlySpread << .objectId)
+            , model.dailySpread
+                |> Maybe.map (Route.DailySpread << .objectId)
                 |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
         CancelClicked ->
             ( model
-            , model.monthlySpread
-                |> Maybe.map (Route.MonthlySpread << .objectId)
+            , model.dailySpread
+                |> Maybe.map (Route.DailySpread << .objectId)
                 |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
-        monthlySpread_ =
-            model.monthlySpread
+        dailySpread_ =
+            model.dailySpread
 
-        monthlySpread =
-            monthlySpread_
+        dailySpread =
+            dailySpread_
                 |> Maybe.map
-                    MonthlySpread.fromParseObject
+                    DailySpread.fromParseObject
     in
-    Html.div
-        [ class "edit-monthly-spread"
+    [ viewConfig.topAppBar
+        { title =
+            dailySpread
+                |> Maybe.map DailySpread.title
+                |> Maybe.withDefault ""
+        , menuIcon =
+            icon
+                { iconConfig
+                    | additionalAttributes =
+                        [ TopAppBar.navigationIcon
+                        , Html.Events.onClick (lift BackClicked)
+                        ]
+                }
+                "arrow_back"
+        , additionalSections =
+            []
+        }
+    , Html.div
+        [ class "edit-daily-spread"
+        , viewConfig.fixedAdjust
         ]
-        [ viewConfig.toolbar
-            { title =
-                monthlySpread
-                    |> Maybe.map MonthlySpread.title
-                    |> Maybe.withDefault ""
-            , menuIcon =
-                icon
-                    { iconConfig
-                        | additionalAttributes =
-                            [ TopAppBar.navigationIcon
-                            , Html.Events.onClick (lift BackClicked)
-                            ]
-                    }
-                    "arrow_back"
-            , additionalSections =
-                []
-            }
-        , Html.div
-            [ class "edit-monthly-spread__wrapper"
+        [ Html.div
+            [ class "edit-daily-spread__wrapper"
             ]
             [ Html.div
-                [ class "edit-monthly-spread__year-wrapper"
+                [ class "edit-daily-spread__year-wrapper"
                 ]
                 [ textField
                     { textFieldConfig
@@ -218,9 +229,7 @@ view lift viewConfig model =
                         , onInput = Just (lift << YearChanged)
                     }
                 ]
-            , Html.div
-                [ class "edit-monthly-spread__month-wrapper"
-                ]
+            , Html.div [ class "edit-daily-spread__month-wrapper" ]
                 [ textField
                     { textFieldConfig
                         | label = "Month"
@@ -228,33 +237,44 @@ view lift viewConfig model =
                         , onInput = Just (lift << MonthChanged)
                     }
                 ]
-            , Html.div
-                [ class "edit-monthly-spread__buttons-wrapper"
+            , Html.div [ class "edit-daily-spread__day-of-month-wrapper" ]
+                [ textField
+                    { textFieldConfig
+                        | label = "Day of month"
+                        , value = Just model.dayOfMonth
+                        , onInput = Just (lift << DayOfMonthChanged)
+                    }
                 ]
-                [ textButton
+            , Html.div
+                [ class "edit-daily-spread__buttons-wrapper"
+                ]
+                [ raisedButton
                     { buttonConfig
                         | onClick = Just (lift SaveClicked)
                     }
                     "Save"
-                , textButton
+                , raisedButton
                     { buttonConfig
                         | onClick = Just (lift CancelClicked)
                     }
                     "Cancel"
                 ]
             ]
-        , if model.monthlySpread /= Nothing then
+        , if model.dailySpread /= Nothing then
             Html.div
-                [ class "edit-monthly-spread__wrapper"
+                [ class "edit-daily-spread__wrapper"
                 ]
                 [ Html.h2
-                    [ class "edit-monthly-spread__headline" ]
+                    [ class "edit-daily-spread__headline" ]
                     [ text "Delete"
                     ]
                 , Html.div
-                    [ class "edit-monthly-spread__delete-wrapper"
+                    [ class "edit-daily-spread__delete-wrapper"
                     ]
-                    [ textButton { buttonConfig | onClick = Just (lift DeleteClicked) }
+                    [ raisedButton
+                        { buttonConfig
+                            | onClick = Just (lift DeleteClicked)
+                        }
                         "Delete"
                     ]
                 , dialog
@@ -264,9 +284,7 @@ view lift viewConfig model =
                     }
                     { title = Just "Confirm to delete"
                     , content =
-                        [ text """
-Do you really want to delete this monthly spread?
-                          """
+                        [ text "Do you really want to delete this daily spread?"
                         ]
                     , actions =
                         [ cancelButton
@@ -286,3 +304,4 @@ Do you really want to delete this monthly spread?
           else
             text ""
         ]
+    ]

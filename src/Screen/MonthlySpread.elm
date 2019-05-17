@@ -1,4 +1,4 @@
-module View.MonthlySpread exposing (Index, Model, Msg(..), dayView, defaultModel, init, subscriptions, update, view)
+module Screen.MonthlySpread exposing (Index, Model, Msg(..), dayView, defaultModel, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Dict exposing (Dict)
@@ -14,6 +14,7 @@ import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
 import Parse
 import Route exposing (Route)
+import Screen
 import Task
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
@@ -22,7 +23,6 @@ import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.Day as Day exposing (Day)
 import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
-import View
 
 
 type alias Model =
@@ -60,7 +60,7 @@ type alias Index =
 
 init :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Parse.ObjectId MonthlySpread
     -> Model
     -> ( Model, Cmd msg )
@@ -81,7 +81,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> View.Config msg
+    -> Screen.Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -168,7 +168,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
+view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
         monthlySpread_ =
@@ -185,36 +185,37 @@ view lift viewConfig model =
         bullets =
             model.bullets
     in
-    Html.div
-        [ class "monthly-spread" ]
-        [ viewConfig.toolbar
-            { title =
-                title
-            , menuIcon =
-                icon
-                    { iconConfig
-                        | additionalAttributes =
-                            [ TopAppBar.navigationIcon
-                            , Html.Events.onClick (lift BackClicked)
-                            ]
+    [ viewConfig.topAppBar
+        { title = title
+        , menuIcon =
+            icon
+                { iconConfig
+                    | additionalAttributes =
+                        [ TopAppBar.navigationIcon
+                        , Html.Events.onClick (lift BackClicked)
+                        ]
+                }
+                "arrow_back"
+        , additionalSections =
+            [ TopAppBar.section [ TopAppBar.alignEnd ]
+                [ textButton
+                    { buttonConfig
+                        | onClick = Just (lift EditClicked)
                     }
-                    "arrow_back"
-            , additionalSections =
-                [ TopAppBar.section [ TopAppBar.alignEnd ]
-                    [ textButton
-                        { buttonConfig
-                            | onClick = Just (lift EditClicked)
-                        }
-                        "Edit"
-                    , textButton
-                        { buttonConfig
-                            | onClick = Just (lift NewBulletClicked)
-                        }
-                        "New bullet"
-                    ]
+                    "Edit"
+                , textButton
+                    { buttonConfig
+                        | onClick = Just (lift NewBulletClicked)
+                    }
+                    "New bullet"
                 ]
-            }
-        , card
+            ]
+        }
+    , Html.div
+        [ class "monthly-spread"
+        , viewConfig.fixedAdjust
+        ]
+        [ card
             { cardConfig
                 | additionalAttributes = [ class "monthly-spread__wrapper" ]
             }
@@ -274,6 +275,7 @@ view lift viewConfig model =
             , actions = Nothing
             }
         ]
+    ]
 
 
 dayView lift monthlySpread dayOfMonth model =
