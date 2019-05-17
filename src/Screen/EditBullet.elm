@@ -266,11 +266,9 @@ view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     [ viewConfig.topAppBar
         { title =
-            if model.bulletId /= Nothing then
-                "Edit bullet"
-
-            else
-                "New bullet"
+            model.bulletId
+                |> Maybe.map ((++) "Edit " << ObjectId.toString)
+                |> Maybe.withDefault "New bullet"
         , menuIcon =
             icon
                 { iconConfig
@@ -283,7 +281,7 @@ view lift viewConfig model =
         , additionalSections = []
         }
     , Html.div
-        [ class "edit-bullet"
+        [ class "screen edit-bullet"
         , viewConfig.fixedAdjust
         , case model.tipe of
             Task ->
@@ -295,17 +293,11 @@ view lift viewConfig model =
             Note ->
                 class "edit-bullet--tipe-note"
         ]
-        [ icon
-            { iconConfig
-                | additionalAttributes =
-                    [ class "edit-bullet__back-icon"
-                    , Html.Events.onClick (lift BackClicked)
-                    ]
-            }
-            "arrow_back"
-        , Html.div [ class "edit-bullet__wrapper" ]
-            [ bulletForm lift model
-            , bulletDelete lift model
+        [ Html.div [ class "screen__wrapper" ]
+            [ Html.div [ class "edit-bullet__wrapper" ]
+                [ bulletForm lift model
+                , bulletDelete lift model
+                ]
             ]
         ]
     ]
@@ -327,6 +319,16 @@ bulletForm lift model =
                 [ filledSelect
                     { selectConfig
                         | label = "Type"
+                        , value =
+                            case model.tipe of
+                                Task ->
+                                    Just "task"
+
+                                Event ->
+                                    Just "event"
+
+                                Note ->
+                                    Just "note"
                         , onChange =
                             Just
                                 (\value ->
@@ -356,6 +358,16 @@ bulletForm lift model =
                     [ filledSelect
                         { selectConfig
                             | label = "Type"
+                            , value =
+                                case model.taskState of
+                                    Bullet.Checked ->
+                                        Just "checked"
+
+                                    Bullet.Unchecked ->
+                                        Just "unchecked"
+
+                                    Bullet.Migrated ->
+                                        Nothing
                             , onChange =
                                 Just
                                     (\value ->
@@ -434,7 +446,7 @@ bulletForm lift model =
         bulletDayOfMonth =
             textField
                 { textFieldConfig
-                    | label = "DayOfMonth"
+                    | label = "DD"
                     , value = Just model.dayOfMonth
                     , onInput = Just (lift << DayOfMonthChanged)
                 }
@@ -442,7 +454,7 @@ bulletForm lift model =
         bulletMonth =
             textField
                 { textFieldConfig
-                    | label = "Month"
+                    | label = "MM"
                     , value = Just model.month
                     , onInput = Just (lift << MonthChanged)
                 }
@@ -450,7 +462,7 @@ bulletForm lift model =
         bulletYear =
             textField
                 { textFieldConfig
-                    | label = "Year"
+                    | label = "YYYY"
                     , value = Just model.year
                     , onInput = Just (lift << YearChanged)
                 }
