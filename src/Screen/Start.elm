@@ -1,4 +1,4 @@
-module Screen.Start exposing (Model, Msg(..), backlogCard, bulletClass, dailyBulletsCard, defaultModel, init, inputCard, monthlyBulletsCard, subscriptions, upcomingEventsCard, update, view, viewBullet)
+module Screen.Start exposing (Model, Msg, defaultModel, init, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -12,6 +12,7 @@ import Material.ChipSet exposing (choiceChipSet)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TextField exposing (textField, textFieldConfig)
+import Material.Theme as Theme
 import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
@@ -56,24 +57,11 @@ init lift { today, parse } model =
 
         getBullets =
             Parse.toTask parse
-                (Parse.query Bullet.decode
-                    (Parse.emptyQuery "Bullet"
-                     --                        |> (\query ->
-                     --                                { query
-                     --                                    | whereClause =
-                     --                                        Parse.and
-                     --                                            [ Parse.equalTo "year" (Encode.int year)
-                     --                                            , Parse.equalTo "month" (Encode.int month)
-                     --                                            ]
-                     --                                }
-                     --                           )
-                    )
-                )
+                (Parse.query Bullet.decode (Parse.emptyQuery "Bullet"))
     in
     ( defaultModel
     , Cmd.batch
-        [ Task.attempt (lift << BulletsChanged) getBullets
-        ]
+        [ Task.attempt (lift << BulletsChanged) getBullets ]
     )
 
 
@@ -89,7 +77,7 @@ update :
     -> Model
     -> ( Model, Cmd msg )
 update lift ({ today, parse } as viewConfig) msg model =
-    case msg of
+    case Debug.log "Msg" msg of
         BulletCreated (Err err) ->
             -- TODO:
             let
@@ -191,10 +179,13 @@ view lift ({ today } as viewConfig) model =
             model.bullets
                 |> List.filter
                     (\bullet ->
-                        List.all identity
+                        List.all
+                            identity
                             [ bullet.ctor /= Bullet.Note
-                            , bullet.ctor /= Bullet.Task
-                            , bullet.taskState /= Just Bullet.Checked
+                            , bullet.ctor
+                                /= Bullet.Task
+                                || bullet.taskState
+                                /= Just Bullet.Checked
                             ]
                     )
                 |> List.sortBy
@@ -231,7 +222,6 @@ view lift ({ today } as viewConfig) model =
             [ inputCard lift viewConfig model
             , dailyBulletsCard lift viewConfig model sortedBullets
             , monthlyBulletsCard lift viewConfig model sortedBullets
-            , upcomingEventsCard lift viewConfig model sortedBullets
             , backlogCard lift viewConfig model sortedBullets
             ]
         ]
@@ -303,6 +293,9 @@ inputCard lift viewConfig model =
 
 dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
     let
+        ( yearToday, monthToday, dayOfMonthToday ) =
+            Calendar.toGregorian today
+
         bullets =
             sortedBullets
                 |> List.filter
@@ -329,9 +322,6 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
                             |> Maybe.withDefault ""
                 , String.fromInt dayOfMonthToday
                 ]
-
-        ( yearToday, monthToday, dayOfMonthToday ) =
-            Calendar.toGregorian today
     in
     card
         { cardConfig
@@ -341,7 +331,8 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
-                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    , list listConfig
+                        (List.map (viewBulletDaily lift viewConfig model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -355,13 +346,12 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
                 |> List.filter
                     (\bullet ->
                         case bullet.date of
-                            Bullet.DayDate { year, month, dayOfMonth } ->
-                                ( year, month, dayOfMonth )
-                                    > ( yearToday, monthToday, dayOfMonthToday )
-
                             Bullet.MonthDate { year, month } ->
-                                ( year, month, 0 )
-                                    > ( yearToday, monthToday, dayOfMonthToday )
+                                (year == yearToday) && (month == monthToday)
+
+                            Bullet.DayDate { year, month, dayOfMonth } ->
+                                ((year == yearToday) && (month == monthToday))
+                                    && (dayOfMonth > dayOfMonthToday)
                     )
 
         title =
@@ -385,47 +375,8 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
-                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
-                    ]
-            ]
-        , actions = Nothing
-        }
-
-
-upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
-    let
-        bullets =
-            sortedBullets
-                |> List.filter
-                    (\bullet ->
-                        List.all identity
-                            [ bullet.ctor == Bullet.Event
-                            , (case bullet.date of
-                                Bullet.DayDate { year, month, dayOfMonth } ->
-                                    ( year, month, dayOfMonth )
-
-                                Bullet.MonthDate { year, month } ->
-                                    ( year, month, 0 )
-                              )
-                                >= ( yearToday, monthToday, dayOfMonthToday )
-                            ]
-                    )
-
-        title =
-            "Upcoming events"
-
-        ( yearToday, monthToday, dayOfMonthToday ) =
-            Calendar.toGregorian today
-    in
-    card
-        { cardConfig
-            | additionalAttributes = [ class "start__monthly-bullets" ]
-        }
-        { blocks =
-            [ cardBlock <|
-                Html.div []
-                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
-                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    , list listConfig
+                        (List.map (viewBulletMonthly lift viewConfig model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -438,17 +389,19 @@ backlogCard lift ({ today } as viewConfig) model sortedBullets =
             sortedBullets
                 |> List.filter
                     (\bullet ->
-                        List.all identity
-                            [ bullet.taskState == Just Bullet.Unchecked
-                            , (case bullet.date of
-                                Bullet.DayDate { year, month, dayOfMonth } ->
-                                    ( year, month, dayOfMonth )
+                        case bullet.date of
+                            Bullet.DayDate { year, month, dayOfMonth } ->
+                                bullet.taskState
+                                    == Just Bullet.Unchecked
+                                    && (year <= yearToday)
+                                    && (month <= monthToday)
+                                    && (dayOfMonth < dayOfMonthToday)
 
-                                Bullet.MonthDate { year, month } ->
-                                    ( year, month, 0 )
-                              )
-                                < ( yearToday, monthToday, dayOfMonthToday )
-                            ]
+                            Bullet.MonthDate { year, month } ->
+                                bullet.taskState
+                                    == Just Bullet.Unchecked
+                                    && (year <= yearToday)
+                                    && (month < monthToday)
                     )
 
         title =
@@ -530,3 +483,62 @@ viewBullet lift viewConfig model bullet =
             , listItemSecondaryText [] [ text (Maybe.withDefault "–" date) ]
             ]
         ]
+
+
+viewBulletDaily :
+    (Msg msg -> msg)
+    -> Screen.Config msg
+    -> Model
+    -> Parse.Object Bullet
+    -> Html msg
+viewBulletDaily lift viewConfig model bullet =
+    listItem
+        { listItemConfig
+            | additionalAttributes =
+                [ class (bulletClass bullet)
+                , Html.Events.onClick (lift (BulletClicked bullet))
+                ]
+        }
+        [ listItemGraphic [] []
+        , text bullet.text
+        ]
+
+
+viewBulletMonthly :
+    (Msg msg -> msg)
+    -> Screen.Config msg
+    -> Model
+    -> Parse.Object Bullet
+    -> Html msg
+viewBulletMonthly lift viewConfig model bullet =
+    let
+        date =
+            case bullet.date of
+                Bullet.DayDate { year, month, dayOfMonth } ->
+                    Just <|
+                        String.fromInt dayOfMonth
+                            ++ ".\u{00A0}"
+                            ++ String.fromInt month
+
+                Bullet.MonthDate _ ->
+                    Nothing
+    in
+    listItem
+        { listItemConfig
+            | additionalAttributes =
+                [ class (bulletClass bullet)
+                , Html.Events.onClick (lift (BulletClicked bullet))
+                ]
+        }
+        (listItemGraphic [] []
+            :: text bullet.text
+            :: (date
+                    |> Maybe.map
+                        (\date_ ->
+                            [ text "\u{00A0}"
+                            , Html.span [ Theme.textHintOnBackground ] [ text date_ ]
+                            ]
+                        )
+                    |> Maybe.withDefault []
+               )
+        )
