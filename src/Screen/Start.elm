@@ -23,8 +23,6 @@ import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.Bullet.Parser as Bullet
-import Type.DailySpread as DailySpread exposing (DailySpread)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 
 
 type alias Model =

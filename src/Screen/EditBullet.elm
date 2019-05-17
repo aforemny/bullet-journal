@@ -19,9 +19,6 @@ import Screen
 import Task
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import Type.DailySpread as DailySpread exposing (DailySpread)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 
 
 type alias Model =
@@ -36,9 +33,6 @@ type alias Model =
     , dayOfMonth : String
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
-    , dailySpreads : List (Parse.Object DailySpread)
-    , monthlySpreads : List (Parse.Object MonthlySpread)
-    , collectionSpreads : List (Parse.Object CollectionSpread)
     }
 
 
@@ -64,9 +58,6 @@ defaultModel referringUrl bulletId =
     , month = ""
     , dayOfMonth = ""
     , showConfirmDeleteDialog = False
-    , dailySpreads = []
-    , monthlySpreads = []
-    , collectionSpreads = []
     }
 
 
@@ -88,9 +79,6 @@ type Msg msg
     | DayOfMonthChanged String
     | MonthChanged String
     | YearChanged String
-    | DailySpreadsChanged (Result Parse.Error (List (Parse.Object DailySpread)))
-    | MonthlySpreadsChanged (Result Parse.Error (List (Parse.Object MonthlySpread)))
-    | CollectionSpreadsChanged (Result Parse.Error (List (Parse.Object CollectionSpread)))
 
 
 init :
@@ -107,15 +95,6 @@ init lift viewConfig referringUrl bulletId model =
             |> Maybe.map (Bullet.get viewConfig.parse)
             |> Maybe.map (Task.attempt (lift << BulletResult))
             |> Maybe.withDefault Cmd.none
-        , Parse.send viewConfig.parse
-            (lift << DailySpreadsChanged)
-            (Parse.query DailySpread.decode (Parse.emptyQuery "DailySpread"))
-        , Parse.send viewConfig.parse
-            (lift << MonthlySpreadsChanged)
-            (Parse.query MonthlySpread.decode (Parse.emptyQuery "MonthlySpread"))
-        , Parse.send viewConfig.parse
-            (lift << CollectionSpreadsChanged)
-            (Parse.query CollectionSpread.decode (Parse.emptyQuery "CollectionSpread"))
         ]
     )
 
@@ -307,24 +286,6 @@ update lift viewConfig msg model =
               }
             , Cmd.none
             )
-
-        DailySpreadsChanged (Err _) ->
-            ( model, Cmd.none )
-
-        DailySpreadsChanged (Ok dailySpreads) ->
-            ( { model | dailySpreads = dailySpreads }, Cmd.none )
-
-        MonthlySpreadsChanged (Err _) ->
-            ( model, Cmd.none )
-
-        MonthlySpreadsChanged (Ok monthlySpreads) ->
-            ( { model | monthlySpreads = monthlySpreads }, Cmd.none )
-
-        CollectionSpreadsChanged (Err _) ->
-            ( model, Cmd.none )
-
-        CollectionSpreadsChanged (Ok collectionSpreads) ->
-            ( { model | collectionSpreads = collectionSpreads }, Cmd.none )
 
 
 view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)

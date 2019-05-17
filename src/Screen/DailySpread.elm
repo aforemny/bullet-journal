@@ -20,29 +20,26 @@ import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
 import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.DailySpread as DailySpread exposing (DailySpread)
 
 
 type alias Model =
-    { dailySpread : Maybe (Parse.Object DailySpread)
+    { date : { year : Int, month : Int, dayOfMonth : Int }
     , bullets : List (Parse.Object Bullet)
     , error : Maybe Parse.Error
     }
 
 
-defaultModel : Model
-defaultModel =
-    { dailySpread = Nothing
+defaultModel : { year : Int, month : Int, dayOfMonth : Int } -> Model
+defaultModel date =
+    { date = date
     , bullets = []
     , error = Nothing
     }
 
 
 type Msg msg
-    = DailySpreadResult (Result Parse.Error (Parse.Object DailySpread))
-    | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
+    = BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
-    | EditClicked
     | BackClicked
     | BulletClicked (Parse.ObjectId Bullet)
 
@@ -50,16 +47,19 @@ type Msg msg
 init :
     (Msg msg -> msg)
     -> Screen.Config msg
-    -> Parse.ObjectId DailySpread
+    ->
+        { year : Int
+        , month : Int
+        , dayOfMonth : Int
+        }
     -> Model
     -> ( Model, Cmd msg )
-init lift viewConfig objectId model =
-    ( defaultModel
+init lift viewConfig ({ year, month, dayOfMonth } as date) model =
+    ( defaultModel date
     , Cmd.batch
-        [ Task.attempt (lift << DailySpreadResult)
-            (DailySpread.get viewConfig.parse objectId)
-        , Task.attempt (lift << BulletsResult)
-            (Bullet.getOf viewConfig.parse "DailySpread" objectId)
+        [ Parse.send viewConfig.parse
+            (lift << BulletsResult)
+            (Parse.query Bullet.decode (Parse.emptyQuery "Bullet"))
         ]
     )
 
@@ -77,12 +77,6 @@ update :
     -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        DailySpreadResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        DailySpreadResult (Ok dailySpread) ->
-            ( { model | dailySpread = Just dailySpread }, Cmd.none )
-
         BulletsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -95,14 +89,6 @@ update lift viewConfig msg model =
                 (Route.toString (Route.EditBullet Nothing))
             )
 
-        EditClicked ->
-            ( model
-            , model.dailySpread
-                |> Maybe.map (Route.EditDailySpread << .objectId)
-                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
-                |> Maybe.withDefault Cmd.none
-            )
-
         BulletClicked bulletId ->
             ( model
             , Browser.Navigation.pushUrl viewConfig.key
@@ -111,28 +97,21 @@ update lift viewConfig msg model =
 
         BackClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
-                (Route.toString Route.TableOfContent)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Start)
             )
 
 
 view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
-        dailySpread_ =
-            model.dailySpread
-
-        dailySpread =
-            dailySpread_
-                |> Maybe.map DailySpread.fromParseObject
-
         title =
-            dailySpread
-                |> Maybe.map DailySpread.title
-                |> Maybe.withDefault ""
-
-        bullets =
-            model.bullets
+            String.fromInt model.date.year
+                ++ "-"
+                ++ String.fromInt
+                    model.date.month
+                ++ "-"
+                ++ String.fromInt
+                    model.date.dayOfMonth
     in
     [ viewConfig.topAppBar
         { title = title
@@ -147,11 +126,6 @@ view lift viewConfig model =
         , additionalSections =
             [ TopAppBar.section [ TopAppBar.alignEnd ]
                 [ textButton
-                    { buttonConfig
-                        | onClick = Just (lift EditClicked)
-                    }
-                    "Edit"
-                , textButton
                     { buttonConfig
                         | onClick = Just (lift NewBulletClicked)
                     }
@@ -188,7 +162,7 @@ view lift viewConfig model =
                                         }
                                         (Bullet.fromParseObject bullet)
                                 )
-                                bullets
+                                model.bullets
                             )
                         ]
                 ]

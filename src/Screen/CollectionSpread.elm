@@ -16,7 +16,6 @@ import Screen
 import Task exposing (Task)
 import Time
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 
 
 type alias Model =

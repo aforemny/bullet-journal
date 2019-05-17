@@ -18,39 +18,26 @@ import ParseConfig exposing (parseConfig)
 import Ports
 import Route exposing (Route)
 import Screen
-import Screen.CollectionSpread
 import Screen.DailySpread
 import Screen.EditBullet
-import Screen.EditCollectionSpread
-import Screen.EditDailySpread
-import Screen.EditMonthlySpread
 import Screen.MonthlySpread
 import Screen.Start
-import Screen.TableOfContent
 import Task exposing (Task)
 import Time
 import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import Type.DailySpread as DailySpread exposing (DailySpread)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import Url exposing (Url)
 
 
 type alias Model =
     { key : Browser.Navigation.Key
     , url : Route
-    , collectionSpread : Screen.CollectionSpread.Model
-    , dailySpread : Screen.DailySpread.Model
-    , tableOfContent : Screen.TableOfContent.Model
-    , monthlySpread : Screen.MonthlySpread.Model
-    , editCollectionSpread : Screen.EditCollectionSpread.Model
-    , editDailySpread : Screen.EditDailySpread.Model
-    , editMonthlySpread : Screen.EditMonthlySpread.Model
     , editBullet : Maybe Screen.EditBullet.Model
     , start : Screen.Start.Model
+    , dailySpread : Screen.DailySpread.Model
+    , monthlySpread : Screen.MonthlySpread.Model
     , today : Calendar.Day
     , now : Time.Posix
     , error : Maybe Parse.Error
@@ -61,16 +48,11 @@ type alias Model =
 
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
-    { url = Route.TableOfContent
-    , collectionSpread = Screen.CollectionSpread.defaultModel
-    , dailySpread = Screen.DailySpread.defaultModel
-    , tableOfContent = Screen.TableOfContent.defaultModel
-    , monthlySpread = Screen.MonthlySpread.defaultModel
-    , editMonthlySpread = Screen.EditMonthlySpread.defaultModel
-    , editCollectionSpread = Screen.EditCollectionSpread.defaultModel
-    , editDailySpread = Screen.EditDailySpread.defaultModel
-    , editBullet = Nothing
+    { url = Route.Start
     , start = Screen.Start.defaultModel
+    , editBullet = Nothing
+    , dailySpread = Screen.DailySpread.defaultModel { year = 1970, month = 1, dayOfMonth = 1 }
+    , monthlySpread = Screen.MonthlySpread.defaultModel { year = 1970, month = 1 }
     , today = Calendar.fromGregorian 1970 1 1
     , now = Time.millisToPosix 0
     , error = Nothing
@@ -86,22 +68,14 @@ type Msg
     | NowChanged (Maybe Time.Posix)
     | BackClicked
     | EditBulletMsg (Screen.EditBullet.Msg Msg)
-    | CollectionSpreadMsg (Screen.CollectionSpread.Msg Msg)
     | DailySpreadMsg (Screen.DailySpread.Msg Msg)
-    | TableOfContentMsg (Screen.TableOfContent.Msg Msg)
     | StartMsg (Screen.Start.Msg Msg)
     | MonthlySpreadMsg (Screen.MonthlySpread.Msg Msg)
-    | EditCollectionSpreadMsg (Screen.EditCollectionSpread.Msg Msg)
-    | EditDailySpreadMsg (Screen.EditDailySpread.Msg Msg)
-    | EditMonthlySpreadMsg (Screen.EditMonthlySpread.Msg Msg)
     | TodayClicked
-    | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | ThisMonthClicked
-    | ThisMonthClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url
     | StartClicked
-    | TableOfContentClicked
     | DrawerClosed
     | OpenDrawerClicked
 
@@ -156,17 +130,9 @@ subscriptions model =
     Sub.batch
         [ Ports.today TodayChanged
         , Ports.now NowChanged
-        , Screen.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
         , Screen.DailySpread.subscriptions DailySpreadMsg model.dailySpread
-        , Screen.TableOfContent.subscriptions TableOfContentMsg model.tableOfContent
         , Screen.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
-        , Screen.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
-        , Screen.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
         , Screen.Start.subscriptions StartMsg model.start
-        , Screen.EditDailySpread.subscriptions EditDailySpreadMsg model.editDailySpread
-        , model.editBullet
-            |> Maybe.map (Screen.EditBullet.subscriptions EditBulletMsg)
-            |> Maybe.withDefault Sub.none
         ]
 
 
@@ -177,70 +143,25 @@ andThenInitScreen screenConfig url ( model, cmd ) =
             Screen.Start.init StartMsg screenConfig model.start
                 |> Tuple.mapFirst (\start -> { model | start = start })
 
-        Route.TableOfContent ->
-            Screen.TableOfContent.init TableOfContentMsg screenConfig model.tableOfContent
-                |> Tuple.mapFirst (\tableOfContent -> { model | tableOfContent = tableOfContent })
-
-        Route.MonthlySpread objectId ->
+        Route.MonthlySpread date ->
             Screen.MonthlySpread.init MonthlySpreadMsg
                 screenConfig
-                objectId
+                date
                 model.monthlySpread
                 |> Tuple.mapFirst
                     (\monthlySpread ->
                         { model | monthlySpread = monthlySpread }
                     )
 
-        Route.DailySpread objectId ->
+        Route.DailySpread date ->
             Screen.DailySpread.init
                 DailySpreadMsg
                 screenConfig
-                objectId
+                date
                 model.dailySpread
                 |> Tuple.mapFirst
                     (\dailySpread ->
                         { model | dailySpread = dailySpread }
-                    )
-
-        Route.CollectionSpread objectId ->
-            Screen.CollectionSpread.init CollectionSpreadMsg
-                screenConfig
-                objectId
-                model.collectionSpread
-                |> Tuple.mapFirst
-                    (\collectionSpread ->
-                        { model | collectionSpread = collectionSpread }
-                    )
-
-        Route.EditMonthlySpread objectId ->
-            Screen.EditMonthlySpread.init EditMonthlySpreadMsg
-                screenConfig
-                objectId
-                model.editMonthlySpread
-                |> Tuple.mapFirst
-                    (\editMonthlySpread ->
-                        { model | editMonthlySpread = editMonthlySpread }
-                    )
-
-        Route.EditDailySpread objectId ->
-            Screen.EditDailySpread.init
-                EditDailySpreadMsg
-                screenConfig
-                objectId
-                model.editDailySpread
-                |> Tuple.mapFirst
-                    (\editDailySpread ->
-                        { model | editDailySpread = editDailySpread }
-                    )
-
-        Route.EditCollectionSpread objectId ->
-            Screen.EditCollectionSpread.init EditCollectionSpreadMsg
-                screenConfig
-                objectId
-                model.editCollectionSpread
-                |> Tuple.mapFirst
-                    (\editCollectionSpread ->
-                        { model | editCollectionSpread = editCollectionSpread }
                     )
 
         Route.EditBullet bulletId ->
@@ -286,36 +207,6 @@ update msg model =
                 |> Tuple.mapFirst
                     (\dailySpread -> { model | dailySpread = dailySpread })
 
-        CollectionSpreadMsg msg_ ->
-            model.collectionSpread
-                |> Screen.CollectionSpread.update CollectionSpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\collectionSpread -> { model | collectionSpread = collectionSpread })
-
-        EditMonthlySpreadMsg msg_ ->
-            model.editMonthlySpread
-                |> Screen.EditMonthlySpread.update EditMonthlySpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\editMonthlySpread -> { model | editMonthlySpread = editMonthlySpread })
-
-        EditDailySpreadMsg msg_ ->
-            model.editDailySpread
-                |> Screen.EditDailySpread.update EditDailySpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\editDailySpread -> { model | editDailySpread = editDailySpread })
-
-        EditCollectionSpreadMsg msg_ ->
-            model.editCollectionSpread
-                |> Screen.EditCollectionSpread.update EditCollectionSpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\editCollectionSpread -> { model | editCollectionSpread = editCollectionSpread })
-
-        TableOfContentMsg msg_ ->
-            model.tableOfContent
-                |> Screen.TableOfContent.update TableOfContentMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\tableOfContent -> { model | tableOfContent = tableOfContent })
-
         StartMsg msg_ ->
             model.start
                 |> Screen.Start.update StartMsg screenConfig msg_
@@ -352,28 +243,15 @@ update msg model =
                     Calendar.toGregorian model.today
             in
             ( model
-            , Task.attempt TodayClickedResult
-                (DailySpread.getBy screenConfig.parse year month dayOfMonth
-                    |> Task.andThen
-                        (\dailySpread_ ->
-                            case dailySpread_ of
-                                Just dailySpread ->
-                                    Task.succeed dailySpread.objectId
-
-                                Nothing ->
-                                    DailySpread.create screenConfig.parse
-                                        (DailySpread.empty year month dayOfMonth)
-                        )
-                )
-            )
-
-        TodayClickedResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        TodayClickedResult (Ok dailySpreadId) ->
-            ( model
             , Browser.Navigation.pushUrl model.key
-                (Route.toString (Route.DailySpread dailySpreadId))
+                (Route.toString
+                    (Route.DailySpread
+                        { year = year
+                        , month = month
+                        , dayOfMonth = dayOfMonth
+                        }
+                    )
+                )
             )
 
         ThisMonthClicked ->
@@ -382,28 +260,8 @@ update msg model =
                     Calendar.toGregorian model.today
             in
             ( model
-            , Task.attempt ThisMonthClickedResult
-                (MonthlySpread.getBy screenConfig.parse year month
-                    |> Task.andThen
-                        (\dailySpread_ ->
-                            case dailySpread_ of
-                                Just dailySpread ->
-                                    Task.succeed dailySpread.objectId
-
-                                Nothing ->
-                                    MonthlySpread.create screenConfig.parse
-                                        (MonthlySpread.empty year month)
-                        )
-                )
-            )
-
-        ThisMonthClickedResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        ThisMonthClickedResult (Ok monthlySpreadId) ->
-            ( model
             , Browser.Navigation.pushUrl model.key
-                (Route.toString (Route.MonthlySpread monthlySpreadId))
+                (Route.toString (Route.MonthlySpread { year = year, month = month }))
             )
 
         UrlRequested (Browser.Internal url) ->
@@ -421,11 +279,6 @@ update msg model =
         StartClicked ->
             ( model
             , Browser.Navigation.pushUrl model.key (Route.toString Route.Start)
-            )
-
-        TableOfContentClicked ->
-            ( model
-            , Browser.Navigation.pushUrl model.key (Route.toString Route.TableOfContent)
             )
 
         DrawerClosed ->
@@ -501,26 +354,11 @@ content screenConfig model =
             Route.Start ->
                 viewStart screenConfig model
 
-            Route.TableOfContent ->
-                viewTableOfContent screenConfig model
-
             Route.MonthlySpread objectId ->
                 viewMonthlySpread screenConfig model
 
             Route.DailySpread objectId ->
                 viewDailySpread screenConfig model
-
-            Route.CollectionSpread objectId ->
-                viewCollectionSpread screenConfig model
-
-            Route.EditMonthlySpread objectId ->
-                viewEditMonthlySpread screenConfig model
-
-            Route.EditDailySpread objectId ->
-                viewEditDailySpread screenConfig model
-
-            Route.EditCollectionSpread objectId ->
-                viewEditCollectionSpread screenConfig model
 
             Route.NotFound urlString ->
                 viewNotFound screenConfig urlString model
@@ -559,10 +397,6 @@ drawer model =
                   , activated = False
                   , onClick = ThisMonthClicked
                   }
-                , { label = "Index"
-                  , activated = model.url == Route.TableOfContent
-                  , onClick = TableOfContentClicked
-                  }
                 ]
             )
         ]
@@ -580,38 +414,11 @@ viewDailySpread screenConfig model =
     Screen.DailySpread.view DailySpreadMsg screenConfig model.dailySpread
 
 
-viewCollectionSpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewCollectionSpread screenConfig model =
-    Screen.CollectionSpread.view CollectionSpreadMsg screenConfig model.collectionSpread
-
-
-viewEditMonthlySpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewEditMonthlySpread screenConfig model =
-    Screen.EditMonthlySpread.view EditMonthlySpreadMsg screenConfig model.editMonthlySpread
-
-
-viewEditDailySpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewEditDailySpread screenConfig model =
-    Screen.EditDailySpread.view EditDailySpreadMsg screenConfig model.editDailySpread
-
-
-viewEditCollectionSpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewEditCollectionSpread screenConfig model =
-    Screen.EditCollectionSpread.view EditCollectionSpreadMsg
-        screenConfig
-        model.editCollectionSpread
-
-
 viewNotFound : Screen.Config Msg -> String -> Model -> List (Html Msg)
 viewNotFound screenConfig urlString model =
     [ Html.div [ class "not-found" ]
         [ text ("URL not found: " ++ urlString) ]
     ]
-
-
-viewTableOfContent : Screen.Config Msg -> Model -> List (Html Msg)
-viewTableOfContent screenConfig model =
-    Screen.TableOfContent.view TableOfContentMsg screenConfig model.tableOfContent
 
 
 viewStart : Screen.Config Msg -> Model -> List (Html Msg)

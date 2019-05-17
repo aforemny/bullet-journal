@@ -18,9 +18,6 @@ import Task exposing (Task)
 import Time
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
-import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import Type.DailySpread as DailySpread exposing (DailySpread)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 
 
 type alias Model =

@@ -4,22 +4,14 @@ import Parse
 import Parse.Private.ObjectId as ObjectId
 import String
 import Type.Bullet as Bullet exposing (Bullet)
-import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
-import Type.DailySpread as DailySpread exposing (DailySpread)
-import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import Url exposing (Url)
-import Url.Parser exposing ((</>), s)
+import Url.Parser exposing ((</>), int, s)
 
 
 type Route
-    = TableOfContent
-    | Start
-    | CollectionSpread (Parse.ObjectId CollectionSpread)
-    | EditCollectionSpread (Parse.ObjectId CollectionSpread)
-    | DailySpread (Parse.ObjectId DailySpread)
-    | EditDailySpread (Parse.ObjectId DailySpread)
-    | MonthlySpread (Parse.ObjectId MonthlySpread)
-    | EditMonthlySpread (Parse.ObjectId MonthlySpread)
+    = Start
+    | DailySpread { year : Int, month : Int, dayOfMonth : Int }
+    | MonthlySpread { year : Int, month : Int }
     | EditBullet (Maybe (Parse.ObjectId Bullet))
     | NotFound String
 
@@ -31,26 +23,19 @@ toString url =
             Start ->
                 ""
 
-            TableOfContent ->
-                "index"
+            MonthlySpread { year, month } ->
+                "monthly-spread/"
+                    ++ String.fromInt year
+                    ++ "/"
+                    ++ String.fromInt month
 
-            MonthlySpread objectId ->
-                "monthly-spread/" ++ ObjectId.toString objectId
-
-            EditMonthlySpread objectId ->
-                "monthly-spread/" ++ ObjectId.toString objectId ++ "/edit"
-
-            DailySpread objectId ->
-                "daily-spread/" ++ ObjectId.toString objectId
-
-            EditDailySpread objectId ->
-                "daily-spread/" ++ ObjectId.toString objectId ++ "/edit"
-
-            CollectionSpread objectId ->
-                "collection-spread/" ++ ObjectId.toString objectId
-
-            EditCollectionSpread objectId ->
-                "collection-spread/" ++ ObjectId.toString objectId ++ "/edit"
+            DailySpread { year, month, dayOfMonth } ->
+                "daily-spread/"
+                    ++ String.fromInt year
+                    ++ "/"
+                    ++ String.fromInt month
+                    ++ "/"
+                    ++ String.fromInt dayOfMonth
 
             EditBullet Nothing ->
                 "bullet/new"
@@ -84,14 +69,16 @@ parseUrl =
     in
     Url.Parser.oneOf
         [ Url.Parser.map Start (s "")
-        , Url.Parser.map TableOfContent (s "index")
         , Url.Parser.map (EditBullet Nothing) (s "bullet" </> s "new")
         , Url.Parser.map (EditBullet << Just) (s "bullet" </> objectId)
-        , Url.Parser.map EditCollectionSpread
-            (s "collection-spread" </> objectId </> s "edit")
-        , Url.Parser.map EditDailySpread (s "daily-spread" </> objectId </> s "edit")
-        , Url.Parser.map EditMonthlySpread (s "monthly-spread" </> objectId </> s "edit")
-        , Url.Parser.map CollectionSpread (s "collection-spread" </> objectId)
-        , Url.Parser.map DailySpread (s "daily-spread" </> objectId)
-        , Url.Parser.map MonthlySpread (s "monthly-spread" </> objectId)
+        , Url.Parser.map
+            (\year month dayOfMonth ->
+                DailySpread { year = year, month = month, dayOfMonth = dayOfMonth }
+            )
+            (s "daily-spread" </> int </> int </> int)
+        , Url.Parser.map
+            (\year month ->
+                MonthlySpread { year = year, month = month }
+            )
+            (s "monthly-spread" </> int </> int)
         ]
