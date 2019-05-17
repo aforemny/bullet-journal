@@ -2,15 +2,13 @@ module View.CollectionSpread exposing (Model, Msg(..), defaultModel, init, subsc
 
 import Browser.Navigation
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Html.Events as Html
-import Material
-import Material.Button as Button
-import Material.Card as Card
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.Toolbar as Toolbar
+import Html.Attributes exposing (class, style)
+import Html.Events
+import Material.Button exposing (buttonConfig, textButton)
+import Material.Card exposing (card, cardBlock, cardConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (list, listConfig)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
@@ -21,26 +19,23 @@ import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , collectionSpread : Maybe (Parse.Object CollectionSpread)
+type alias Model =
+    { collectionSpread : Maybe (Parse.Object CollectionSpread)
     , bullets : List (Parse.Object Bullet)
     , error : Maybe Parse.Error
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , collectionSpread = Nothing
+    { collectionSpread = Nothing
     , bullets = []
     , error = Nothing
     }
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
+    = CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
     | EditClicked
@@ -52,13 +47,12 @@ init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Parse.ObjectId CollectionSpread
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 init lift viewConfig objectId model =
     ( defaultModel
     , Cmd.batch
-        [ Material.init (lift << Mdc)
-        , Task.attempt (lift << CollectionSpreadResult)
+        [ Task.attempt (lift << CollectionSpreadResult)
             (CollectionSpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
             (Bullet.getOf viewConfig.parse "CollectionSpread" objectId)
@@ -66,22 +60,19 @@ init lift viewConfig objectId model =
     )
 
 
-subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
+subscriptions : (Msg msg -> msg) -> Model -> Sub msg
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
-
         BulletsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -120,7 +111,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift viewConfig model =
     let
         collectionSpread_ =
@@ -137,67 +128,70 @@ view lift viewConfig model =
                 |> Maybe.withDefault "Collection"
     in
     Html.div
-        [ Html.class "collection-spread"
+        [ class "collection-spread"
         ]
         [ viewConfig.toolbar
-            { title =
-                title
+            { title = title
             , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    , Options.onClick (lift BackClicked)
-                    ]
+                icon
+                    { iconConfig
+                        | additionalAttributes =
+                            [ TopAppBar.navigationIcon
+                            , Html.Events.onClick (lift BackClicked)
+                            ]
+                    }
                     "arrow_back"
             , additionalSections =
-                [ Toolbar.section
-                    [ Toolbar.alignEnd
-                    ]
-                    [ Button.view (lift << Mdc)
-                        "collection-spread__edit-collection-spread"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick (lift EditClicked)
-                        ]
-                        [ text "Edit"
-                        ]
-                    , Button.view (lift << Mdc)
-                        "collection-spread__new-bullet"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick (lift NewBulletClicked)
-                        ]
-                        [ text "New bullet"
-                        ]
+                [ TopAppBar.section [ TopAppBar.alignEnd ]
+                    [ textButton
+                        { buttonConfig
+                            | onClick = Just (lift EditClicked)
+                        }
+                        "Edit"
+                    , textButton
+                        { buttonConfig
+                            | onClick = Just (lift NewBulletClicked)
+                        }
+                        "New bullet"
                     ]
                 ]
             }
-        , Card.view
-            [ cs "collection-spread__wrapper" ]
-            [ Html.div
-                [ Html.class "collection-spread__primary" ]
-                [ Html.div
-                    [ Html.class "collection-spread__title" ]
-                    [ text title ]
-                , Html.div
-                    [ Html.class "collection-spread__subtitle" ]
-                    [ text "Describe collection" ]
-                ]
-            , Lists.ol (lift << Mdc)
-                -- TODO: id
-                ""
-                model.mdc
-                [ cs "collection-spread__bullet-wrapper" ]
-                (List.map
-                    (\bullet ->
-                        Bullet.view
-                            { additionalOptions =
-                                [ cs "collection-spread__bullet"
-                                , Options.onClick (lift (BulletClicked bullet.objectId))
-                                ]
+        , card
+            { cardConfig
+                | additionalAttributes =
+                    [ class "collection-spread__wrapper" ]
+            }
+            { blocks =
+                [ cardBlock <|
+                    Html.div []
+                        [ Html.div
+                            [ class "collection-spread__primary" ]
+                            [ Html.div
+                                [ class "collection-spread__title" ]
+                                [ text title ]
+                            , Html.div
+                                [ class "collection-spread__subtitle" ]
+                                [ text "Describe collection" ]
+                            ]
+                        , list
+                            { listConfig
+                                | additionalAttributes =
+                                    [ class "collection-spread__bullet-wrapper" ]
                             }
-                            (Bullet.fromParseObject bullet)
-                    )
-                    model.bullets
-                )
-            ]
+                            (List.map
+                                (\bullet ->
+                                    Bullet.view
+                                        { additionalOptions =
+                                            [ class "collection-spread__bullet"
+                                            , Html.Events.onClick (lift (BulletClicked bullet.objectId))
+                                            ]
+                                        }
+                                        (Bullet.fromParseObject bullet)
+                                )
+                                model.bullets
+                            )
+                        ]
+                ]
+            , actions = Nothing
+            }
         ]

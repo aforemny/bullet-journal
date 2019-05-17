@@ -2,16 +2,14 @@ module View.EditCollectionSpread exposing (Model, Msg(..), defaultModel, init, s
 
 import Browser.Navigation
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Html.Events as Html
-import Material
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.TextField as TextField
-import Material.Toolbar as Toolbar
+import Html.Attributes exposing (class, style)
+import Html.Events
+import Material.Button exposing (buttonConfig, raisedButton)
+import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (list, listConfig)
+import Material.TextField exposing (textField, textFieldConfig)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
@@ -22,19 +20,17 @@ import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , collectionSpread : Maybe (Parse.Object CollectionSpread)
+type alias Model =
+    { collectionSpread : Maybe (Parse.Object CollectionSpread)
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
     , title : String
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , collectionSpread = Nothing
+    { collectionSpread = Nothing
     , error = Nothing
     , showConfirmDeleteDialog = False
     , title = ""
@@ -42,8 +38,7 @@ defaultModel =
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
+    = CollectionSpreadResult (Result Parse.Error (Parse.Object CollectionSpread))
     | BackClicked
     | DeleteClicked
     | ConfirmDeleteDialogClosed
@@ -60,34 +55,28 @@ init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Parse.ObjectId CollectionSpread
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 init lift viewConfig objectId model =
     ( defaultModel
-    , Cmd.batch
-        [ Material.init (lift << Mdc)
-        , Task.attempt (lift << CollectionSpreadResult)
-            (CollectionSpread.get viewConfig.parse objectId)
-        ]
+    , Task.attempt (lift << CollectionSpreadResult)
+        (CollectionSpread.get viewConfig.parse objectId)
     )
 
 
-subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
+subscriptions : (Msg msg -> msg) -> Model -> Sub msg
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
-
         CollectionSpreadResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -169,7 +158,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift viewConfig model =
     let
         collectionSpread_ =
@@ -181,7 +170,7 @@ view lift viewConfig model =
                     CollectionSpread.fromParseObject
     in
     Html.div
-        [ Html.class "edit-collection-spread"
+        [ class "edit-collection-spread"
         ]
         [ viewConfig.toolbar
             { title =
@@ -189,107 +178,86 @@ view lift viewConfig model =
                     |> Maybe.map CollectionSpread.title
                     |> Maybe.withDefault ""
             , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    , Options.onClick (lift BackClicked)
-                    ]
+                icon
+                    { iconConfig
+                        | additionalAttributes =
+                            [ TopAppBar.navigationIcon
+                            , Html.Events.onClick (lift BackClicked)
+                            ]
+                    }
                     "arrow_back"
             , additionalSections =
                 []
             }
         , Html.div
-            [ Html.class "edit-collection-spread__wrapper"
+            [ class "edit-collection-spread__wrapper"
             ]
             [ Html.div
-                [ Html.class "edit-collection-spread__title-wrapper"
+                [ class "edit-collection-spread__title-wrapper"
                 ]
-                [ TextField.view (lift << Mdc)
-                    "edit-collection-spread__title"
-                    model.mdc
-                    [ TextField.label "Title"
-                    , TextField.value model.title
-                    , Options.onInput (lift << TitleChanged)
-                    ]
-                    []
+                [ textField
+                    { textFieldConfig
+                        | label = "Title"
+                        , value = Just model.title
+                        , onInput = Just (lift << TitleChanged)
+                    }
                 ]
             , Html.div
-                [ Html.class "edit-collection-spread__buttons-wrapper"
+                [ class "edit-collection-spread__buttons-wrapper"
                 ]
-                [ Button.view (lift << Mdc)
-                    "edit-collection-spread__save-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.raised
-                    , Button.onClick (lift SaveClicked)
-                    ]
-                    [ text "Save" ]
-                , Button.view (lift << Mdc)
-                    "edit-collection-spread__cancel-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.onClick (lift CancelClicked)
-                    ]
-                    [ text "Cancel" ]
+                [ raisedButton
+                    { buttonConfig
+                        | onClick = Just (lift SaveClicked)
+                    }
+                    "Save"
+                , raisedButton
+                    { buttonConfig
+                        | onClick = Just (lift CancelClicked)
+                    }
+                    "Cancel"
                 ]
             ]
         , if model.collectionSpread /= Nothing then
             Html.div
-                [ Html.class "edit-collection-spread__wrapper"
+                [ class "edit-collection-spread__wrapper"
                 ]
                 [ Html.h2
-                    [ Html.class "edit-collection-spread__headline" ]
+                    [ class "edit-collection-spread__headline" ]
                     [ text "Delete"
                     ]
                 , Html.div
-                    [ Html.class "edit-collection-spread__delete-wrapper"
+                    [ class "edit-collection-spread__delete-wrapper"
                     ]
-                    [ Button.view (lift << Mdc)
-                        "edit-collection-spread__delete"
-                        model.mdc
-                        [ Button.raised
-                        , Button.ripple
-                        , Button.onClick (lift DeleteClicked)
-                        ]
-                        [ text "Delete"
-                        ]
+                    [ raisedButton
+                        { buttonConfig
+                            | onClick = Just (lift DeleteClicked)
+                        }
+                        "Delete"
                     ]
-                , Dialog.view (lift << Mdc)
-                    "edit-collection-spread__confirm-delete"
-                    model.mdc
-                    [ when model.showConfirmDeleteDialog Dialog.open
-                    , Dialog.onClose (lift ConfirmDeleteDialogClosed)
-                    ]
-                    [ styled Html.h3
-                        [ Dialog.title
-                        ]
-                        [ text "Confirm to delete"
-                        ]
-                    , Dialog.content []
+                , dialog
+                    { dialogConfig
+                        | open = model.showConfirmDeleteDialog
+                        , onClose = Just (lift ConfirmDeleteDialogClosed)
+                    }
+                    { title = Just "Confirm to delete"
+                    , content =
                         [ text """
 Do you really want to delete this collection spread?"
                           """
                         ]
-                    , Dialog.actions []
-                        [ Button.view (lift << Mdc)
-                            "edit-collection-spread__confirm-delete__cancel"
-                            model.mdc
-                            [ Button.ripple
-                            , Dialog.cancel
-                            , Button.onClick (lift CancelDeleteClicked)
-                            ]
-                            [ text "No"
-                            ]
-                        , Button.view (lift << Mdc)
-                            "edit-collection-spread__confirm-delete__accept"
-                            model.mdc
-                            [ Button.ripple
-                            , Dialog.accept
-                            , Button.onClick (lift ConfirmDeleteClicked)
-                            ]
-                            [ text "Yes"
-                            ]
+                    , actions =
+                        [ cancelButton
+                            { buttonConfig
+                                | onClick = Just (lift CancelDeleteClicked)
+                            }
+                            "No"
+                        , acceptButton
+                            { buttonConfig
+                                | onClick = Just (lift ConfirmDeleteClicked)
+                            }
+                            "Yes"
                         ]
-                    ]
+                    }
                 ]
 
           else

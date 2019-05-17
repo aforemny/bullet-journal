@@ -13,15 +13,15 @@ var api = new ParseServer({
 app.use('/parse', api);
 
 app.get('/fonts/roboto/:file', function(req, res) {
-  res.sendFile(req.params.file, { root: __dirname + '/public/fonts/roboto/' });
+  res.sendFile(req.params.file, { root: __dirname + '/_site/fonts/roboto/' });
 });
 
 app.get('/:file', function(req, res) {
-  res.sendFile(req.params.file, { root: __dirname + '/public/' });
+  res.sendFile(req.params.file, { root: __dirname + '/_site/' });
 });
 
 app.get('/', function(req, res) {
-  res.sendFile('index.html', { root: __dirname + '/public/' });
+  res.sendFile('index.html', { root: __dirname + '/_site/' });
 });
 
 app.listen(1337, function() {

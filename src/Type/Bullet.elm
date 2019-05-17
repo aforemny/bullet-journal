@@ -1,12 +1,12 @@
 module Type.Bullet exposing (Any(..), Bullet, Config, State(..), TaskState(..), anyObjectId, castObjectId, create, decode, decodeState, decodeTaskState, delete, empty, emptyEvent, emptyNote, emptyTask, encode, encodeState, encodeTaskState, fromParseObject, get, getOf, update, view)
 
 import Html exposing (Html, text)
-import Html.Attributes as Html
+import Html.Attributes exposing (class, style)
 import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (listItem, listItemConfig, listItemGraphic, listItemText)
 import Parse
 import Parse.Decode
 import Parse.Encode
@@ -283,51 +283,51 @@ delete parse bulletId =
 
 
 type alias Config msg =
-    { additionalOptions : List (Lists.Property msg)
+    { additionalOptions : List (Html.Attribute msg)
     }
 
 
-view : Config msg -> Bullet -> Lists.ListItem msg
+view : Config msg -> Bullet -> Html msg
 view config bullet =
-    Lists.li
-        (cs "bullet"
-            :: (case bullet.state of
-                    Event ->
-                        cs "bullet--event"
-
-                    Note ->
-                        cs "bullet--note"
-
-                    Task Unchecked ->
-                        cs "bullet--task bullet--task--unchecked"
-
-                    Task Checked ->
-                        cs "bullet--task bullet--task--checked"
-
-                    Task Migrated ->
-                        cs "bullet--task bullet--task--migrated"
-               )
-            :: config.additionalOptions
-        )
-        [ Lists.graphicIcon
-            []
-            (case bullet.state of
+    let
+        stateCs =
+            case bullet.state of
                 Event ->
-                    "radio_button_unchecked"
+                    class "bullet--event"
 
                 Note ->
-                    "indeterminate_check_box"
+                    class "bullet--note"
 
                 Task Unchecked ->
-                    "check_box_outline_blank"
+                    class "bullet--task bullet--task--unchecked"
 
                 Task Checked ->
-                    "check_box"
+                    class "bullet--task bullet--task--checked"
 
                 Task Migrated ->
-                    "check_box"
-            )
-        , Lists.text []
-            [ text bullet.text
+                    class "bullet--task bullet--task--migrated"
+    in
+    listItem
+        { listItemConfig
+            | additionalAttributes =
+                [ class "bullet", stateCs ] ++ config.additionalOptions
+        }
+        [ listItemGraphic []
+            [ case bullet.state of
+                Event ->
+                    icon iconConfig "radio_button_unchecked"
+
+                Note ->
+                    icon iconConfig "indeterminate_check_box"
+
+                Task Unchecked ->
+                    icon iconConfig "check_box_outline_blank"
+
+                Task Checked ->
+                    icon iconConfig "check_box"
+
+                Task Migrated ->
+                    icon iconConfig "check_box"
             ]
+        , listItemText [] [ text bullet.text ]
         ]

@@ -2,16 +2,15 @@ module View.Start exposing (Model, Msg(..), backlogCard, bulletClass, dailyBulle
 
 import Browser.Navigation
 import Html exposing (Html, text)
-import Html.Attributes as Html
+import Html.Attributes exposing (class, style)
 import Html.Events
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Material
-import Material.Card as Card
-import Material.Chip as Chip
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.TextField as TextField
+import Material.Card exposing (card, cardBlock, cardConfig, cardPrimaryAction, cardPrimaryActionConfig)
+import Material.Chip.Choice as Chip exposing (choiceChip, choiceChipConfig)
+import Material.ChipSet exposing (choiceChipSet)
+import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemPrimaryText, listItemSecondaryText, listItemText)
+import Material.TextField exposing (textField, textFieldConfig)
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route exposing (Route)
@@ -26,24 +25,21 @@ import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , bullets : List (Parse.Object Bullet)
+type alias Model =
+    { bullets : List (Parse.Object Bullet)
     , input : String
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , bullets = []
+    { bullets = []
     , input = ""
     }
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | NoOp
+    = NoOp
     | BulletsChanged (Result Parse.Error (List (Parse.Object Bullet)))
     | BulletClicked (Parse.Object Bullet)
     | InputChanged String
@@ -52,7 +48,7 @@ type Msg msg
     | BulletMarkedDone (Result Parse.Error (Parse.ObjectId Bullet))
 
 
-init : (Msg msg -> msg) -> View.Config msg -> Model msg -> ( Model msg, Cmd msg )
+init : (Msg msg -> msg) -> View.Config msg -> Model -> ( Model, Cmd msg )
 init lift { today, parse } model =
     let
         ( year, month, dayOfMonth ) =
@@ -81,17 +77,17 @@ init lift { today, parse } model =
     )
 
 
-subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
+subscriptions : (Msg msg -> msg) -> Model -> Sub msg
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift ({ today, parse } as viewConfig) msg model =
     case msg of
         BulletCreated (Err err) ->
@@ -184,11 +180,8 @@ update lift ({ today, parse } as viewConfig) msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
 
-
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift ({ today } as viewConfig) model =
     let
         sortedBullets =
@@ -221,7 +214,7 @@ view lift ({ today } as viewConfig) model =
                     )
     in
     Html.div
-        [ Html.class "start"
+        [ class "start"
         ]
         [ inputCard lift viewConfig model
         , dailyBulletsCard lift viewConfig model sortedBullets
@@ -233,58 +226,62 @@ view lift ({ today } as viewConfig) model =
 
 inputCard lift viewConfig model =
     Html.div []
-        [ Card.view
-            [ cs "start__input-card" ]
-            [ TextField.view (lift << Mdc)
-                "start__input"
-                model.mdc
-                [ TextField.placeholder "Enter bullet"
-                , TextField.fullwidth
-                , TextField.value model.input
-                , TextField.nativeControl
-                    [ Options.on "keypress"
-                        (Decode.map (lift << InputSubmitted)
-                            (Decode.at [ "which" ] Decode.int
-                                |> Decode.andThen
-                                    (\which ->
-                                        if which == 13 then
-                                            Html.Events.targetValue
+        [ card
+            { cardConfig
+                | additionalAttributes =
+                    [ class "start__input-card" ]
+            }
+            { blocks =
+                cardPrimaryAction cardPrimaryActionConfig <|
+                    [ cardBlock <|
+                        Html.div []
+                            [ textField
+                                { textFieldConfig
+                                    | placeholder = Just "Enter bullet"
+                                    , fullwidth = True
+                                    , value = Just model.input
+                                    , additionalAttributes =
+                                        [ Html.Events.on "keypress"
+                                            (Decode.map (lift << InputSubmitted)
+                                                (Decode.at [ "which" ] Decode.int
+                                                    |> Decode.andThen
+                                                        (\which ->
+                                                            if which == 13 then
+                                                                Html.Events.targetValue
 
-                                        else
-                                            Decode.fail ""
-                                    )
-                            )
-                        )
+                                                            else
+                                                                Decode.fail ""
+                                                        )
+                                                )
+                                            )
+                                        , Html.Events.onInput (lift << InputChanged)
+                                        ]
+                                }
+                            ]
                     ]
-                , Options.onInput (lift << InputChanged)
-                ]
-                []
-            ]
+            , actions = Nothing
+            }
         , let
             bullet =
                 Bullet.parse model.input
           in
-          Chip.chipset []
+          choiceChipSet []
             (List.filterMap identity
                 [ Just <|
-                    Chip.view (lift << Mdc)
-                        "my-chip"
-                        model.mdc
-                        []
-                        [ text
-                            (case bullet.state of
-                                Bullet.Task _ ->
-                                    "Task"
+                    choiceChip
+                        choiceChipConfig
+                        (case bullet.state of
+                            Bullet.Task _ ->
+                                "Task"
 
-                                Bullet.Event ->
-                                    "Event"
+                            Bullet.Event ->
+                                "Event"
 
-                                Bullet.Note ->
-                                    "Note"
-                            )
-                        ]
+                            Bullet.Note ->
+                                "Note"
+                        )
                 , Just <|
-                    Chip.view (lift << Mdc) "my-chip" model.mdc [] [ text bullet.text ]
+                    choiceChip choiceChipConfig bullet.text
                 ]
             )
         ]
@@ -315,19 +312,19 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
         ( year, month, dayOfMonth ) =
             Calendar.toGregorian today
     in
-    Card.view
-        [ cs "start__daily-bullets"
-        ]
-        [ Html.h3
-            [ Html.class "start__daily-bullets__title" ]
-            [ text title ]
-        , Lists.ul (lift << Mdc)
-            -- TODO: id
-            ""
-            model.mdc
-            []
-            (List.map (viewBullet lift viewConfig model) bullets)
-        ]
+    card
+        { cardConfig
+            | additionalAttributes = [ class "start__daily-bullets" ]
+        }
+        { blocks =
+            [ cardBlock <|
+                Html.div []
+                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    ]
+            ]
+        , actions = Nothing
+        }
 
 
 monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
@@ -354,19 +351,19 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
         ( year, month, dayOfMonth ) =
             Calendar.toGregorian today
     in
-    Card.view
-        [ cs "start__monthly-bullets"
-        ]
-        [ Html.h3
-            [ Html.class "start__daily-bullets__title" ]
-            [ text title ]
-        , Lists.ul (lift << Mdc)
-            -- TODO: id
-            ""
-            model.mdc
-            []
-            (List.map (viewBullet lift viewConfig model) bullets)
-        ]
+    card
+        { cardConfig
+            | additionalAttributes = [ class "start__monthly-bullets" ]
+        }
+        { blocks =
+            [ cardBlock <|
+                Html.div []
+                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    ]
+            ]
+        , actions = Nothing
+        }
 
 
 upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
@@ -389,19 +386,19 @@ upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
         ( year, month, dayOfMonth ) =
             Calendar.toGregorian today
     in
-    Card.view
-        [ cs "start__monthly-bullets"
-        ]
-        [ Html.h3
-            [ Html.class "start__daily-bullets__title" ]
-            [ text title ]
-        , Lists.ul (lift << Mdc)
-            -- TODO: id
-            ""
-            model.mdc
-            []
-            (List.map (viewBullet lift viewConfig model) bullets)
-        ]
+    card
+        { cardConfig
+            | additionalAttributes = [ class "start__monthly-bullets" ]
+        }
+        { blocks =
+            [ cardBlock <|
+                Html.div []
+                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    ]
+            ]
+        , actions = Nothing
+        }
 
 
 backlogCard lift ({ today } as viewConfig) model sortedBullets =
@@ -426,19 +423,20 @@ backlogCard lift ({ today } as viewConfig) model sortedBullets =
         ( year, month, dayOfMonth ) =
             Calendar.toGregorian today
     in
-    Card.view
-        [ cs "start__monthly-bullets"
-        ]
-        [ Html.h3
-            [ Html.class "start__daily-bullets__title" ]
-            [ text title ]
-        , Lists.ul (lift << Mdc)
-            -- TODO: id
-            ""
-            model.mdc
-            []
-            (List.map (viewBullet lift viewConfig model) bullets)
-        ]
+    card
+        { cardConfig
+            | additionalAttributes =
+                [ class "start__monthly-bullets" ]
+        }
+        { blocks =
+            [ cardBlock <|
+                Html.div []
+                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    ]
+            ]
+        , actions = Nothing
+        }
 
 
 bulletClass : Parse.Object Bullet -> String
@@ -466,9 +464,9 @@ bulletClass bullet =
 viewBullet :
     (Msg msg -> msg)
     -> View.Config msg
-    -> Model msg
+    -> Model
     -> Parse.Object Bullet
-    -> Lists.ListItem msg
+    -> Html msg
 viewBullet lift viewConfig model bullet =
     let
         date =
@@ -485,14 +483,16 @@ viewBullet lift viewConfig model bullet =
                 _ ->
                     Nothing
     in
-    Lists.li
-        [ cs (bulletClass bullet)
-        , Options.onClick (lift (BulletClicked bullet))
-        ]
-        [ Lists.graphicIcon [] ""
-        , Lists.text []
+    listItem
+        { listItemConfig
+            | additionalAttributes =
+                [ class (bulletClass bullet)
+                , Html.Events.onClick (lift (BulletClicked bullet))
+                ]
+        }
+        [ listItemGraphic [] []
+        , listItemText []
             [ text bullet.text
-            , Lists.secondaryText []
-                [ text (Maybe.withDefault "–" date) ]
+            , listItemSecondaryText [] [ text (Maybe.withDefault "–" date) ]
             ]
         ]

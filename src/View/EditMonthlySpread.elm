@@ -2,16 +2,14 @@ module View.EditMonthlySpread exposing (Model, Msg(..), defaultModel, init, subs
 
 import Browser.Navigation
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Html.Events as Html
-import Material
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.TextField as TextField
-import Material.Toolbar as Toolbar
+import Html.Attributes exposing (class, style)
+import Html.Events
+import Material.Button exposing (buttonConfig, textButton)
+import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (list, listConfig, listItem, listItemConfig)
+import Material.TextField exposing (textField, textFieldConfig)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
@@ -22,9 +20,8 @@ import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , monthlySpread : Maybe (Parse.Object MonthlySpread)
+type alias Model =
+    { monthlySpread : Maybe (Parse.Object MonthlySpread)
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
     , year : String
@@ -32,10 +29,9 @@ type alias Model msg =
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , monthlySpread = Nothing
+    { monthlySpread = Nothing
     , error = Nothing
     , showConfirmDeleteDialog = False
     , year = ""
@@ -44,8 +40,7 @@ defaultModel =
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | MonthlySpreadResult (Result Parse.Error (Parse.Object MonthlySpread))
+    = MonthlySpreadResult (Result Parse.Error (Parse.Object MonthlySpread))
     | BackClicked
     | DeleteClicked
     | ConfirmDeleteDialogClosed
@@ -63,34 +58,30 @@ init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Parse.ObjectId MonthlySpread
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 init lift viewConfig objectId model =
     ( defaultModel
     , Cmd.batch
-        [ Material.init (lift << Mdc)
-        , Task.attempt (lift << MonthlySpreadResult)
+        [ Task.attempt (lift << MonthlySpreadResult)
             (MonthlySpread.get viewConfig.parse objectId)
         ]
     )
 
 
-subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
+subscriptions : (Msg msg -> msg) -> Model -> Sub msg
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
-
         MonthlySpreadResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -183,7 +174,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift viewConfig model =
     let
         monthlySpread_ =
@@ -195,7 +186,7 @@ view lift viewConfig model =
                     MonthlySpread.fromParseObject
     in
     Html.div
-        [ Html.class "edit-monthly-spread"
+        [ class "edit-monthly-spread"
         ]
         [ viewConfig.toolbar
             { title =
@@ -203,119 +194,93 @@ view lift viewConfig model =
                     |> Maybe.map MonthlySpread.title
                     |> Maybe.withDefault ""
             , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    , Options.onClick (lift BackClicked)
-                    ]
+                icon
+                    { iconConfig
+                        | additionalAttributes =
+                            [ TopAppBar.navigationIcon
+                            , Html.Events.onClick (lift BackClicked)
+                            ]
+                    }
                     "arrow_back"
             , additionalSections =
                 []
             }
         , Html.div
-            [ Html.class "edit-monthly-spread__wrapper"
+            [ class "edit-monthly-spread__wrapper"
             ]
             [ Html.div
-                [ Html.class "edit-monthly-spread__year-wrapper"
+                [ class "edit-monthly-spread__year-wrapper"
                 ]
-                [ TextField.view (lift << Mdc)
-                    "edit-monthly-spread__year"
-                    model.mdc
-                    [ TextField.label "Year"
-                    , TextField.value model.year
-                    , Options.onInput (lift << YearChanged)
-                    ]
-                    []
+                [ textField
+                    { textFieldConfig
+                        | label = "Year"
+                        , value = Just model.year
+                        , onInput = Just (lift << YearChanged)
+                    }
                 ]
             , Html.div
-                [ Html.class "edit-monthly-spread__month-wrapper"
+                [ class "edit-monthly-spread__month-wrapper"
                 ]
-                [ TextField.view (lift << Mdc)
-                    "edit-monthly-spread__month"
-                    model.mdc
-                    [ TextField.label "Month"
-                    , TextField.value model.month
-                    , Options.onInput (lift << MonthChanged)
-                    ]
-                    []
+                [ textField
+                    { textFieldConfig
+                        | label = "Month"
+                        , value = Just model.month
+                        , onInput = Just (lift << MonthChanged)
+                    }
                 ]
             , Html.div
-                [ Html.class "edit-monthly-spread__buttons-wrapper"
+                [ class "edit-monthly-spread__buttons-wrapper"
                 ]
-                [ Button.view (lift << Mdc)
-                    "edit-monthly-spread__save-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.raised
-                    , Button.onClick (lift SaveClicked)
-                    ]
-                    [ text "Save" ]
-                , Button.view (lift << Mdc)
-                    "edit-monthly-spread__cancel-button"
-                    model.mdc
-                    [ Button.ripple
-                    , Button.onClick (lift CancelClicked)
-                    ]
-                    [ text "Cancel" ]
+                [ textButton
+                    { buttonConfig
+                        | onClick = Just (lift SaveClicked)
+                    }
+                    "Save"
+                , textButton
+                    { buttonConfig
+                        | onClick = Just (lift CancelClicked)
+                    }
+                    "Cancel"
                 ]
             ]
         , if model.monthlySpread /= Nothing then
             Html.div
-                [ Html.class "edit-monthly-spread__wrapper"
+                [ class "edit-monthly-spread__wrapper"
                 ]
                 [ Html.h2
-                    [ Html.class "edit-monthly-spread__headline" ]
+                    [ class "edit-monthly-spread__headline" ]
                     [ text "Delete"
                     ]
                 , Html.div
-                    [ Html.class "edit-monthly-spread__delete-wrapper"
+                    [ class "edit-monthly-spread__delete-wrapper"
                     ]
-                    [ Button.view (lift << Mdc)
-                        "edit-monthly-spread__delete"
-                        model.mdc
-                        [ Button.raised
-                        , Button.ripple
-                        , Button.onClick (lift DeleteClicked)
-                        ]
-                        [ text "Delete"
-                        ]
+                    [ textButton { buttonConfig | onClick = Just (lift DeleteClicked) }
+                        "Delete"
                     ]
-                , Dialog.view (lift << Mdc)
-                    "edit-monthly-spread__confirm-delete"
-                    model.mdc
-                    [ when model.showConfirmDeleteDialog Dialog.open
-                    , Dialog.onClose (lift ConfirmDeleteDialogClosed)
-                    ]
-                    [ styled Html.h3
-                        [ Dialog.title
-                        ]
-                        [ text "Confirm to delete"
-                        ]
-                    , Dialog.content []
+                , dialog
+                    { dialogConfig
+                        | onClose = Just (lift ConfirmDeleteDialogClosed)
+                        , open = model.showConfirmDeleteDialog
+                    }
+                    { title = Just "Confirm to delete"
+                    , content =
                         [ text """
 Do you really want to delete this monthly spread?
                           """
                         ]
-                    , Dialog.actions []
-                        [ Button.view (lift << Mdc)
-                            "edit-monthly-spread__confirm-delete__cancel"
-                            model.mdc
-                            [ Button.ripple
-                            , Dialog.cancel
-                            , Button.onClick (lift CancelDeleteClicked)
-                            ]
-                            [ text "No"
-                            ]
-                        , Button.view (lift << Mdc)
-                            "edit-monthly-spread__confirm-delete__accept"
-                            model.mdc
-                            [ Button.ripple
-                            , Dialog.accept
-                            , Button.onClick (lift ConfirmDeleteClicked)
-                            ]
-                            [ text "Yes"
-                            ]
+                    , actions =
+                        [ cancelButton
+                            { buttonConfig
+                                | onClick = Just (lift CancelDeleteClicked)
+                            }
+                            "No"
+                        , acceptButton
+                            { buttonConfig
+                                | onClick = Just (lift ConfirmDeleteClicked)
+                            }
+                            "Yes"
                         ]
-                    ]
+                    }
                 ]
 
           else

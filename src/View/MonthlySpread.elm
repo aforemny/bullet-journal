@@ -3,17 +3,15 @@ module View.MonthlySpread exposing (Index, Model, Msg(..), dayView, defaultModel
 import Browser.Navigation
 import Dict exposing (Dict)
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Html.Events as Html
+import Html.Attributes exposing (class, style)
+import Html.Events
 import Json.Decode as Decode exposing (Decoder)
-import Material
-import Material.Button as Button
-import Material.Card as Card
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.TextField as TextField
-import Material.Toolbar as Toolbar
+import Material.Button exposing (buttonConfig, textButton)
+import Material.Card exposing (card, cardBlock, cardConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (list, listConfig)
+import Material.TextField exposing (textField, textFieldConfig)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Route exposing (Route)
 import Task
@@ -27,19 +25,17 @@ import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , monthlySpread : Maybe (Parse.Object MonthlySpread)
+type alias Model =
+    { monthlySpread : Maybe (Parse.Object MonthlySpread)
     , bullets : List (Parse.Object Bullet)
     , days : Dict ( Day.Month, Day.DayOfMonth ) Day
     , error : Maybe Parse.Error
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , monthlySpread = Nothing
+    { monthlySpread = Nothing
     , bullets = []
     , days = Dict.empty
     , error = Nothing
@@ -47,8 +43,7 @@ defaultModel =
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | MonthlySpreadResult (Result Parse.Error (Parse.Object MonthlySpread))
+    = MonthlySpreadResult (Result Parse.Error (Parse.Object MonthlySpread))
     | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | DaysResult (Result Parse.Error (List (Parse.Object Day)))
     | NewBulletClicked
@@ -67,13 +62,12 @@ init :
     (Msg msg -> msg)
     -> View.Config msg
     -> Parse.ObjectId MonthlySpread
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 init lift viewConfig objectId model =
     ( defaultModel
     , Cmd.batch
-        [ Material.init (lift << Mdc)
-        , Task.attempt (lift << MonthlySpreadResult)
+        [ Task.attempt (lift << MonthlySpreadResult)
             (MonthlySpread.get viewConfig.parse objectId)
         , Task.attempt (lift << BulletsResult)
             (Bullet.getOf viewConfig.parse "MonthlySpread" objectId)
@@ -82,20 +76,17 @@ init lift viewConfig objectId model =
 
 
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
-
         MonthlySpreadResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -177,7 +168,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift viewConfig model =
     let
         monthlySpread_ =
@@ -195,92 +186,93 @@ view lift viewConfig model =
             model.bullets
     in
     Html.div
-        [ Html.class "monthly-spread" ]
+        [ class "monthly-spread" ]
         [ viewConfig.toolbar
             { title =
                 title
             , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    , Options.onClick (lift BackClicked)
-                    ]
+                icon
+                    { iconConfig
+                        | additionalAttributes =
+                            [ TopAppBar.navigationIcon
+                            , Html.Events.onClick (lift BackClicked)
+                            ]
+                    }
                     "arrow_back"
             , additionalSections =
-                [ Toolbar.section
-                    [ Toolbar.alignEnd
-                    ]
-                    [ Button.view (lift << Mdc)
-                        "monthly-spread__edit-monthly-spread"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick (lift EditClicked)
-                        ]
-                        [ text "Edit"
-                        ]
-                    , Button.view (lift << Mdc)
-                        "monthly-spread__new-bullet"
-                        model.mdc
-                        [ Button.ripple
-                        , Button.onClick (lift NewBulletClicked)
-                        ]
-                        [ text "New bullet"
-                        ]
+                [ TopAppBar.section [ TopAppBar.alignEnd ]
+                    [ textButton
+                        { buttonConfig
+                            | onClick = Just (lift EditClicked)
+                        }
+                        "Edit"
+                    , textButton
+                        { buttonConfig
+                            | onClick = Just (lift NewBulletClicked)
+                        }
+                        "New bullet"
                     ]
                 ]
             }
-        , Card.view
-            [ cs "monthly-spread__wrapper"
-            ]
-            [ Html.div
-                [ Html.class "monthly-spread__primary" ]
-                [ Html.div
-                    [ Html.class "monthly-spread__title" ]
-                    [ text title ]
-                , Html.div
-                    [ Html.class "monthly-spread__subtitle" ]
-                    [ text "The Monthly Log helps you organize your month. It consists of a calendar and a task list." ]
-                ]
-            , Html.div
-                [ Html.class "monthly-spread__content-wrapper" ]
-                [ Html.ol
-                    [ Html.class "monthly-spread__days-wrapper" ]
-                    (maybeMonthlySpread
-                        |> Maybe.map
-                            (\monthlySpread ->
-                                List.map
-                                    (\dayOfMonth ->
-                                        dayView lift monthlySpread dayOfMonth model
-                                    )
-                                    (List.range 1
-                                        (Calendar.monthLength
-                                            (Calendar.isLeapYear monthlySpread.year)
-                                            monthlySpread.month
+        , card
+            { cardConfig
+                | additionalAttributes = [ class "monthly-spread__wrapper" ]
+            }
+            { blocks =
+                [ cardBlock <|
+                    Html.div []
+                        [ Html.div
+                            [ class "monthly-spread__primary" ]
+                            [ Html.div
+                                [ class "monthly-spread__title" ]
+                                [ text title ]
+                            , Html.div
+                                [ class "monthly-spread__subtitle" ]
+                                [ text "The Monthly Log helps you organize your month. It consists of a calendar and a task list." ]
+                            ]
+                        , Html.div
+                            [ class "monthly-spread__content-wrapper" ]
+                            [ Html.ol
+                                [ class "monthly-spread__days-wrapper" ]
+                                (maybeMonthlySpread
+                                    |> Maybe.map
+                                        (\monthlySpread ->
+                                            List.map
+                                                (\dayOfMonth ->
+                                                    dayView lift monthlySpread dayOfMonth model
+                                                )
+                                                (List.range 1
+                                                    (Calendar.monthLength
+                                                        (Calendar.isLeapYear monthlySpread.year)
+                                                        monthlySpread.month
+                                                    )
+                                                )
                                         )
-                                    )
-                            )
-                        |> Maybe.withDefault [ text "" ]
-                    )
-                , Lists.ol (lift << Mdc)
-                    -- TODO: id
-                    ""
-                    model.mdc
-                    [ cs "monthly-spread__bullets-wrapper"
-                    ]
-                    (List.map
-                        (\bullet ->
-                            Bullet.view
-                                { additionalOptions =
-                                    [ cs "monthly-spread__bullet"
-                                    , Options.onClick
-                                        (lift (BulletClicked bullet.objectId))
-                                    ]
+                                    |> Maybe.withDefault [ text "" ]
+                                )
+                            , list
+                                { listConfig
+                                    | additionalAttributes =
+                                        [ class "monthly-spread__bullets-wrapper" ]
                                 }
-                                (Bullet.fromParseObject bullet)
-                        )
-                        bullets
-                    )
+                                (List.map
+                                    (\bullet ->
+                                        Bullet.view
+                                            { additionalOptions =
+                                                [ class "monthly-spread__bullet"
+                                                , Html.Events.onClick
+                                                    (lift (BulletClicked bullet.objectId))
+                                                ]
+                                            }
+                                            (Bullet.fromParseObject bullet)
+                                    )
+                                    bullets
+                                )
+                            ]
+                        ]
                 ]
-            ]
+            , actions = Nothing
+            }
         ]
 
 
@@ -302,15 +294,15 @@ dayView lift monthlySpread dayOfMonth model =
                 |> Maybe.withDefault ""
     in
     Html.li
-        [ Html.class "monthly-spread__day"
+        [ class "monthly-spread__day"
         ]
         [ Html.span
-            [ Html.class "monthly-spread__day__day-of-month"
+            [ class "monthly-spread__day__day-of-month"
             ]
             [ text (String.fromInt dayOfMonth)
             ]
         , Html.span
-            [ Html.class "monthly-spread__day__day-of-week"
+            [ class "monthly-spread__day__day-of-week"
             ]
             [ text
                 (case dayOfWeek of
@@ -336,16 +328,10 @@ dayView lift monthlySpread dayOfMonth model =
                         "S"
                 )
             ]
-        , TextField.view (lift << Mdc)
-            ("monthly-spread__day__text-"
-                ++ String.fromInt monthlySpread.month
-                ++ "-"
-                ++ String.fromInt dayOfMonth
-            )
-            model.mdc
-            [ TextField.value value
-            , Options.onInput (lift << DayChanged monthlySpread.month dayOfMonth)
-            , TextField.fullwidth
-            ]
-            []
+        , textField
+            { textFieldConfig
+                | value = Just value
+                , onInput = Just (lift << DayChanged monthlySpread.month dayOfMonth)
+                , fullwidth = True
+            }
         ]

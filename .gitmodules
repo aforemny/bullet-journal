@@ -4,6 +4,6 @@
 [submodule "src/parse"]
 	path = src/parse
 	url = https://github.com/aforemny/parse.git
-[submodule "src/elm-mdc"]
-	path = src/elm-mdc
-	url = https://github.com/aforemny/elm-mdc.git
+[submodule "src/material-components-elm"]
+	path = src/material-components-elm
+	url = github.com:aforemny/material-components-elm.git

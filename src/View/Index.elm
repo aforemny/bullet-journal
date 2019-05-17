@@ -2,16 +2,15 @@ module View.Index exposing (Model, Msg(..), defaultModel, init, newSpreadDialog,
 
 import Browser.Navigation
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Material
-import Material.Button as Button
-import Material.Card as Card
-import Material.Dialog as Dialog
-import Material.Fab as Fab
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.Toolbar as Toolbar
+import Html.Attributes exposing (class, style)
+import Html.Events
+import Material.Button exposing (buttonConfig, textButton)
+import Material.Card exposing (card, cardBlock, cardConfig)
+import Material.Dialog exposing (cancelButton, dialog, dialogConfig)
+import Material.Fab exposing (fab, fabConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemPrimaryText, listItemSecondaryText, listItemText)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Route
 import Task exposing (Task)
@@ -24,9 +23,8 @@ import Type.MonthlySpread as MonthlySpread exposing (MonthlySpread)
 import View
 
 
-type alias Model msg =
-    { mdc : Material.Model msg
-    , monthlySpreads : List (Parse.Object MonthlySpread)
+type alias Model =
+    { monthlySpreads : List (Parse.Object MonthlySpread)
     , dailySpreads : List (Parse.Object DailySpread)
     , collectionSpreads : List (Parse.Object CollectionSpread)
     , error : Maybe Parse.Error
@@ -34,10 +32,9 @@ type alias Model msg =
     }
 
 
-defaultModel : Model msg
+defaultModel : Model
 defaultModel =
-    { mdc = Material.defaultModel
-    , monthlySpreads = []
+    { monthlySpreads = []
     , dailySpreads = []
     , collectionSpreads = []
     , error = Nothing
@@ -46,8 +43,7 @@ defaultModel =
 
 
 type Msg msg
-    = Mdc (Material.Msg msg)
-    | MonthlySpreadsResult (Result Parse.Error (List (Parse.Object MonthlySpread)))
+    = MonthlySpreadsResult (Result Parse.Error (List (Parse.Object MonthlySpread)))
     | DailySpreadsResult (Result Parse.Error (List (Parse.Object DailySpread)))
     | CollectionSpreadsResult (Result Parse.Error (List (Parse.Object CollectionSpread)))
     | NewSpreadClicked
@@ -63,7 +59,7 @@ type Msg msg
     | NewCollectionSpreadClickedResult (Result Parse.Error (Parse.ObjectId CollectionSpread))
 
 
-init : (Msg msg -> msg) -> View.Config msg -> Model msg -> ( Model msg, Cmd msg )
+init : (Msg msg -> msg) -> View.Config msg -> Model -> ( Model, Cmd msg )
 init lift viewConfig model =
     ( { defaultModel
         | monthlySpreads = model.monthlySpreads
@@ -71,8 +67,7 @@ init lift viewConfig model =
         , collectionSpreads = model.collectionSpreads
       }
     , Cmd.batch
-        [ Material.init (lift << Mdc)
-        , Parse.send viewConfig.parse
+        [ Parse.send viewConfig.parse
             (lift << MonthlySpreadsResult)
             (Parse.query MonthlySpread.decode (Parse.emptyQuery "MonthlySpread"))
         , Parse.send viewConfig.parse
@@ -85,22 +80,19 @@ init lift viewConfig model =
     )
 
 
-subscriptions : (Msg msg -> msg) -> Model msg -> Sub msg
+subscriptions : (Msg msg -> msg) -> Model -> Sub msg
 subscriptions lift model =
-    Material.subscriptions (lift << Mdc) model
+    Sub.none
 
 
 update :
     (Msg msg -> msg)
     -> View.Config msg
     -> Msg msg
-    -> Model msg
-    -> ( Model msg, Cmd msg )
+    -> Model
+    -> ( Model, Cmd msg )
 update lift viewConfig msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update (lift << Mdc) msg_ model
-
         MonthlySpreadsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -207,7 +199,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+view : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 view lift viewConfig model =
     let
         monthlySpreads =
@@ -218,12 +210,14 @@ view lift viewConfig model =
                             MonthlySpread.fromParseObject monthlySpread_
                     in
                     ( MonthlySpread.canonicalDate monthlySpread
-                    , Lists.li
-                        [ Options.onClick
-                            (lift (MonthlySpreadClicked monthlySpread_))
-                        ]
-                        [ text (MonthlySpread.title monthlySpread)
-                        ]
+                    , listItem
+                        { listItemConfig
+                            | additionalAttributes =
+                                [ Html.Events.onClick
+                                    (lift (MonthlySpreadClicked monthlySpread_))
+                                ]
+                        }
+                        [ text (MonthlySpread.title monthlySpread) ]
                     )
                 )
                 model.monthlySpreads
@@ -236,11 +230,14 @@ view lift viewConfig model =
                             DailySpread.fromParseObject dailySpread_
                     in
                     ( DailySpread.canonicalDate dailySpread
-                    , Lists.li
-                        [ Options.onClick (lift (DailySpreadClicked dailySpread_))
-                        ]
-                        [ text (DailySpread.title dailySpread)
-                        ]
+                    , listItem
+                        { listItemConfig
+                            | additionalAttributes =
+                                [ Html.Events.onClick
+                                    (lift (DailySpreadClicked dailySpread_))
+                                ]
+                        }
+                        [ text (DailySpread.title dailySpread) ]
                     )
                 )
                 model.dailySpreads
@@ -253,67 +250,73 @@ view lift viewConfig model =
                             CollectionSpread.fromParseObject collectionSpread_
                     in
                     ( CollectionSpread.canonicalDate viewConfig.timeZone collectionSpread
-                    , Lists.li
-                        [ Options.onClick
-                            (lift (CollectionSpreadClicked collectionSpread_))
-                        ]
-                        [ text (CollectionSpread.title collectionSpread)
-                        ]
+                    , listItem
+                        { listItemConfig
+                            | additionalAttributes =
+                                [ Html.Events.onClick
+                                    (lift (CollectionSpreadClicked collectionSpread_))
+                                ]
+                        }
+                        [ text (CollectionSpread.title collectionSpread) ]
                     )
                 )
                 model.collectionSpreads
     in
     Html.div
-        [ Html.class "index"
+        [ class "index"
         ]
         [ viewConfig.toolbar
             { title = "Index"
             , menuIcon =
-                Icon.view
-                    [ Toolbar.menuIcon
-                    ]
+                icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
                     "menu"
             , additionalSections = []
             }
-        , Card.view
-            [ cs "index__wrapper"
-            ]
-            [ Html.div
-                [ Html.class "index__primary" ]
-                [ Html.h2
-                    [ Html.class "index__title" ]
-                    [ text "Index" ]
-                , Html.h3
-                    [ Html.class "index__subtitle" ]
-                    [ text "Collections will show here, so you can quickly find them." ]
-                ]
-            , Lists.ol (lift << Mdc)
-                -- TODO: id
-                ""
-                model.mdc
-                [ cs "index__items-wrapper" ]
-                (List.map Tuple.second <|
-                    List.sortBy Tuple.first <|
-                        List.concat
-                            [ monthlySpreads
-                            , dailySpreads
-                            , collectionSpreads
+        , card
+            { cardConfig
+                | additionalAttributes =
+                    [ class "index__wrapper" ]
+            }
+            { blocks =
+                [ cardBlock <|
+                    Html.div []
+                        [ Html.div
+                            [ class "index__primary" ]
+                            [ Html.h2
+                                [ class "index__title" ]
+                                [ text "Index" ]
+                            , Html.h3
+                                [ class "index__subtitle" ]
+                                [ text "Collections will show here, so you can quickly find them." ]
                             ]
-                )
-            , Fab.view (lift << Mdc)
-                "index__new-spread"
-                model.mdc
-                [ cs "index__new-spread"
-                , Fab.ripple
-                , Options.onClick (lift NewSpreadClicked)
+                        , list
+                            { listConfig
+                                | additionalAttributes =
+                                    [ class "index__items-wrapper" ]
+                            }
+                            (List.map Tuple.second <|
+                                List.sortBy Tuple.first <|
+                                    List.concat
+                                        [ monthlySpreads
+                                        , dailySpreads
+                                        , collectionSpreads
+                                        ]
+                            )
+                        , fab
+                            { fabConfig
+                                | onClick = Just (lift NewSpreadClicked)
+                                , additionalAttributes = [ class "index__new-spread" ]
+                            }
+                            "add"
+                        ]
                 ]
-                [ text "add" ]
-            ]
+            , actions = Nothing
+            }
         , newSpreadDialog lift viewConfig model
         ]
 
 
-newSpreadDialog : (Msg msg -> msg) -> View.Config msg -> Model msg -> Html msg
+newSpreadDialog : (Msg msg -> msg) -> View.Config msg -> Model -> Html msg
 newSpreadDialog lift viewConfig model =
     let
         ( year, month, dayOfMonth ) =
@@ -336,60 +339,54 @@ newSpreadDialog lift viewConfig model =
                 , String.fromInt year
                 ]
     in
-    Dialog.view (lift << Mdc)
-        "new-spread-dialog"
-        model.mdc
-        [ Dialog.onClose (lift NewSpreadDialogClosed)
-        , when model.showNewSpreadDialog Dialog.open
-        ]
-        [ Dialog.content []
-            [ Lists.ul (lift << Mdc)
-                -- TODO: id
-                ""
-                model.mdc
-                [ Lists.twoLine
-                ]
-                [ Lists.li
-                    [ Options.onClick (lift NewMonthlySpreadClicked)
-                    , Options.attribute (Html.tabindex 0)
-                    ]
-                    [ Lists.text []
+    dialog
+        { dialogConfig
+            | onClose = Just (lift NewSpreadDialogClosed)
+            , open = model.showNewSpreadDialog
+        }
+        { title = Nothing
+        , content =
+            [ list
+                { listConfig | twoLine = True }
+                [ listItem
+                    { listItemConfig
+                        | additionalAttributes =
+                            [ Html.Events.onClick (lift NewMonthlySpreadClicked)
+                            , Html.Attributes.tabindex 0
+                            ]
+                    }
+                    [ listItemText []
                         [ text "New monthly spread"
-                        , Lists.secondaryText []
-                            [ text monthlySpreadName
-                            ]
+                        , listItemSecondaryText [] [ text monthlySpreadName ]
                         ]
                     ]
-                , Lists.li
-                    [ Options.onClick (lift NewDailySpreadClicked)
-                    , Options.attribute (Html.tabindex 0)
-                    ]
-                    [ Lists.text []
+                , listItem
+                    { listItemConfig
+                        | additionalAttributes =
+                            [ Html.Events.onClick (lift NewDailySpreadClicked)
+                            , Html.Attributes.tabindex 0
+                            ]
+                    }
+                    [ listItemText []
                         [ text "New daily spread"
-                        , Lists.secondaryText []
-                            [ text dailySpreadName
+                        , listItemSecondaryText [] [ text dailySpreadName ]
+                        ]
+                    ]
+                , listItem
+                    { listItemConfig
+                        | additionalAttributes =
+                            [ Html.Events.onClick (lift NewCollectionSpreadClicked)
+                            , Html.Attributes.tabindex 0
                             ]
-                        ]
-                    ]
-                , Lists.li
-                    [ Options.onClick (lift NewCollectionSpreadClicked)
-                    , Options.attribute (Html.tabindex 0)
-                    ]
-                    [ Lists.text []
-                        [ text "New collection"
-                        ]
-                    ]
+                    }
+                    [ listItemText [] [ text "New collection" ] ]
                 ]
             ]
-        , Dialog.actions []
-            [ Button.view (lift << Mdc)
-                "new-spread-dialog__cancel"
-                model.mdc
-                [ Button.ripple
-                , Button.onClick (lift NewSpreadDialogClosed)
-                , Dialog.cancel
-                ]
-                [ text "Cancel"
-                ]
+        , actions =
+            [ cancelButton
+                { buttonConfig
+                    | onClick = Just (lift NewSpreadDialogClosed)
+                }
+                "Cancel"
             ]
-        ]
+        }

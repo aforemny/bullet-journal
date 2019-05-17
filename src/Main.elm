@@ -4,17 +4,11 @@ import Browser
 import Browser.Navigation
 import Dict exposing (Dict)
 import Html exposing (Html, text)
-import Html.Attributes as Html
-import Html.Events as Html
+import Html.Attributes exposing (class, style)
+import Html.Events
 import Json.Decode as Decode exposing (Value)
-import Material
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.Fab as Fab
-import Material.Icon as Icon
-import Material.List as Lists
-import Material.Options as Options exposing (cs, css, styled, when)
-import Material.Toolbar as Toolbar
+import Material.Button exposing (buttonConfig, textButton)
+import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import ParseConfig exposing (parseConfig)
@@ -44,17 +38,16 @@ import View.Start
 
 type alias Model =
     { key : Browser.Navigation.Key
-    , mdc : Material.Model Msg
     , url : Route
-    , collectionSpread : View.CollectionSpread.Model Msg
-    , dailySpread : View.DailySpread.Model Msg
-    , index : View.Index.Model Msg
-    , monthlySpread : View.MonthlySpread.Model Msg
-    , editCollectionSpread : View.EditCollectionSpread.Model Msg
-    , editDailySpread : View.EditDailySpread.Model Msg
-    , editMonthlySpread : View.EditMonthlySpread.Model Msg
-    , editBullet : Maybe (View.EditBullet.Model Msg)
-    , start : View.Start.Model Msg
+    , collectionSpread : View.CollectionSpread.Model
+    , dailySpread : View.DailySpread.Model
+    , index : View.Index.Model
+    , monthlySpread : View.MonthlySpread.Model
+    , editCollectionSpread : View.EditCollectionSpread.Model
+    , editDailySpread : View.EditDailySpread.Model
+    , editMonthlySpread : View.EditMonthlySpread.Model
+    , editBullet : Maybe View.EditBullet.Model
+    , start : View.Start.Model
     , today : Calendar.Day
     , now : Time.Posix
     , error : Maybe Parse.Error
@@ -64,8 +57,7 @@ type alias Model =
 
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
-    { mdc = Material.defaultModel
-    , url = Route.Index
+    { url = Route.Index
     , collectionSpread = View.CollectionSpread.defaultModel
     , dailySpread = View.DailySpread.defaultModel
     , index = View.Index.defaultModel
@@ -85,7 +77,6 @@ defaultModel key =
 
 type Msg
     = NoOp
-    | Mdc (Material.Msg Msg)
     | TodayChanged (Maybe Calendar.Day)
     | NowChanged (Maybe Time.Posix)
     | BackClicked
@@ -147,15 +138,14 @@ init flags url_ key =
                         }
                    )
     in
-    ( model, Material.init Mdc )
+    ( model, Cmd.none )
         |> initView viewConfig url
 
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ Material.subscriptions Mdc model
-        , Ports.today TodayChanged
+        [ Ports.today TodayChanged
         , Ports.now NowChanged
         , View.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
         , View.DailySpread.subscriptions DailySpreadMsg model.dailySpread
@@ -274,9 +264,6 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
-
-        Mdc msg_ ->
-            Material.update Mdc msg_ model
 
         MonthlySpreadMsg msg_ ->
             model.monthlySpread
@@ -426,38 +413,25 @@ makeViewConfig : Model -> View.Config Msg
 makeViewConfig model =
     { toolbar =
         \config ->
-            Toolbar.view Mdc
-                "toolbar"
-                model.mdc
-                [ Toolbar.fixed
-                ]
-                [ Toolbar.row []
+            topAppBar topAppBarConfig
+                [ TopAppBar.row []
                     (List.concat
-                        [ [ Toolbar.section
-                                [ Toolbar.alignStart
-                                , Toolbar.shrinkToFit
-                                ]
+                        [ [ TopAppBar.section [ TopAppBar.alignStart ]
                                 [ config.menuIcon
-                                , Toolbar.title [] [ text config.title ]
+                                , Html.h1 [ TopAppBar.title ] [ text config.title ]
                                 ]
                           ]
-                        , [ Toolbar.section
-                                [ Toolbar.alignStart
-                                ]
-                                [ Button.view Mdc
-                                    "toolbar__today"
-                                    model.mdc
-                                    [ Button.onClick MonthClicked
-                                    ]
-                                    [ text "Month"
-                                    ]
-                                , Button.view Mdc
-                                    "toolbar__today"
-                                    model.mdc
-                                    [ Button.onClick TodayClicked
-                                    ]
-                                    [ text "Today"
-                                    ]
+                        , [ TopAppBar.section [ TopAppBar.alignStart ]
+                                [ textButton
+                                    { buttonConfig
+                                        | onClick = Just MonthClicked
+                                    }
+                                    "Month"
+                                , textButton
+                                    { buttonConfig
+                                        | onClick = Just TodayClicked
+                                    }
+                                    "Today"
                                 ]
                           ]
                         , config.additionalSections
@@ -479,9 +453,9 @@ view model =
     in
     { title = "Bujo"
     , body =
-        [ styled Html.div
-            [ cs "main"
-            , Toolbar.fixedAdjust "toolbar" model.mdc
+        [ Html.div
+            [ class "main"
+            , TopAppBar.fixedAdjust
             ]
             [ case model.url of
                 Route.Start ->
@@ -552,11 +526,8 @@ viewEditCollectionSpread viewConfig model =
 
 viewNotFound : View.Config Msg -> String -> Model -> Html Msg
 viewNotFound viewConfig urlString model =
-    Html.div
-        [ Html.class "not-found"
-        ]
-        [ text ("URL not found: " ++ urlString)
-        ]
+    Html.div [ class "not-found" ]
+        [ text ("URL not found: " ++ urlString) ]
 
 
 viewIndex : View.Config Msg -> Model -> Html Msg
