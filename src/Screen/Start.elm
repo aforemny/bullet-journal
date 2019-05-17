@@ -9,8 +9,10 @@ import Json.Encode as Encode
 import Material.Card exposing (card, cardBlock, cardConfig, cardPrimaryAction, cardPrimaryActionConfig)
 import Material.Chip.Choice as Chip exposing (choiceChip, choiceChipConfig)
 import Material.ChipSet exposing (choiceChipSet)
+import Material.Icon exposing (icon, iconConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TextField exposing (textField, textFieldConfig)
+import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route exposing (Route)
@@ -213,15 +215,24 @@ view lift ({ today } as viewConfig) model =
                         ( stateSort, createdAtSort )
                     )
     in
-    [ Html.div
-        [ class "start"
+    [ viewConfig.topAppBar
+        { title = "Index"
+        , menuIcon =
+            icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
+                "menu"
+        , additionalSections = []
+        }
+    , Html.div
+        [ class "start screen"
         , viewConfig.fixedAdjust
         ]
-        [ inputCard lift viewConfig model
-        , dailyBulletsCard lift viewConfig model sortedBullets
-        , monthlyBulletsCard lift viewConfig model sortedBullets
-        , upcomingEventsCard lift viewConfig model sortedBullets
-        , backlogCard lift viewConfig model sortedBullets
+        [ Html.div [ class "screen__wrapper" ]
+            [ inputCard lift viewConfig model
+            , dailyBulletsCard lift viewConfig model sortedBullets
+            , monthlyBulletsCard lift viewConfig model sortedBullets
+            , upcomingEventsCard lift viewConfig model sortedBullets
+            , backlogCard lift viewConfig model sortedBullets
+            ]
         ]
     ]
 

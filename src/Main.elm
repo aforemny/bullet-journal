@@ -21,9 +21,9 @@ import Screen.EditBullet
 import Screen.EditCollectionSpread
 import Screen.EditDailySpread
 import Screen.EditMonthlySpread
-import Screen.Index
 import Screen.MonthlySpread
 import Screen.Start
+import Screen.TableOfContent
 import Task exposing (Task)
 import Time
 import Time.Calendar.Days as Calendar
@@ -41,7 +41,7 @@ type alias Model =
     , url : Route
     , collectionSpread : Screen.CollectionSpread.Model
     , dailySpread : Screen.DailySpread.Model
-    , index : Screen.Index.Model
+    , tableOfContent : Screen.TableOfContent.Model
     , monthlySpread : Screen.MonthlySpread.Model
     , editCollectionSpread : Screen.EditCollectionSpread.Model
     , editDailySpread : Screen.EditDailySpread.Model
@@ -57,10 +57,10 @@ type alias Model =
 
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
-    { url = Route.Index
+    { url = Route.TableOfContent
     , collectionSpread = Screen.CollectionSpread.defaultModel
     , dailySpread = Screen.DailySpread.defaultModel
-    , index = Screen.Index.defaultModel
+    , tableOfContent = Screen.TableOfContent.defaultModel
     , monthlySpread = Screen.MonthlySpread.defaultModel
     , editMonthlySpread = Screen.EditMonthlySpread.defaultModel
     , editCollectionSpread = Screen.EditCollectionSpread.defaultModel
@@ -83,7 +83,7 @@ type Msg
     | EditBulletMsg (Screen.EditBullet.Msg Msg)
     | CollectionSpreadMsg (Screen.CollectionSpread.Msg Msg)
     | DailySpreadMsg (Screen.DailySpread.Msg Msg)
-    | IndexMsg (Screen.Index.Msg Msg)
+    | TableOfContentMsg (Screen.TableOfContent.Msg Msg)
     | StartMsg (Screen.Start.Msg Msg)
     | MonthlySpreadMsg (Screen.MonthlySpread.Msg Msg)
     | EditCollectionSpreadMsg (Screen.EditCollectionSpread.Msg Msg)
@@ -149,7 +149,7 @@ subscriptions model =
         , Ports.now NowChanged
         , Screen.CollectionSpread.subscriptions CollectionSpreadMsg model.collectionSpread
         , Screen.DailySpread.subscriptions DailySpreadMsg model.dailySpread
-        , Screen.Index.subscriptions IndexMsg model.index
+        , Screen.TableOfContent.subscriptions TableOfContentMsg model.tableOfContent
         , Screen.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
         , Screen.EditMonthlySpread.subscriptions EditMonthlySpreadMsg model.editMonthlySpread
         , Screen.EditCollectionSpread.subscriptions EditCollectionSpreadMsg model.editCollectionSpread
@@ -168,9 +168,9 @@ andThenInitScreen screenConfig url ( model, cmd ) =
             Screen.Start.init StartMsg screenConfig model.start
                 |> Tuple.mapFirst (\start -> { model | start = start })
 
-        Route.Index ->
-            Screen.Index.init IndexMsg screenConfig model.index
-                |> Tuple.mapFirst (\index -> { model | index = index })
+        Route.TableOfContent ->
+            Screen.TableOfContent.init TableOfContentMsg screenConfig model.tableOfContent
+                |> Tuple.mapFirst (\tableOfContent -> { model | tableOfContent = tableOfContent })
 
         Route.MonthlySpread objectId ->
             Screen.MonthlySpread.init MonthlySpreadMsg
@@ -301,11 +301,11 @@ update msg model =
                 |> Tuple.mapFirst
                     (\editCollectionSpread -> { model | editCollectionSpread = editCollectionSpread })
 
-        IndexMsg msg_ ->
-            model.index
-                |> Screen.Index.update IndexMsg screenConfig msg_
+        TableOfContentMsg msg_ ->
+            model.tableOfContent
+                |> Screen.TableOfContent.update TableOfContentMsg screenConfig msg_
                 |> Tuple.mapFirst
-                    (\index -> { model | index = index })
+                    (\tableOfContent -> { model | tableOfContent = tableOfContent })
 
         StartMsg msg_ ->
             model.start
@@ -459,8 +459,8 @@ view model =
                 Route.Start ->
                     viewStart screenConfig model
 
-                Route.Index ->
-                    viewIndex screenConfig model
+                Route.TableOfContent ->
+                    viewTableOfContent screenConfig model
 
                 Route.MonthlySpread objectId ->
                     viewMonthlySpread screenConfig model
@@ -529,9 +529,9 @@ viewNotFound screenConfig urlString model =
     ]
 
 
-viewIndex : Screen.Config Msg -> Model -> List (Html Msg)
-viewIndex screenConfig model =
-    Screen.Index.view IndexMsg screenConfig model.index
+viewTableOfContent : Screen.Config Msg -> Model -> List (Html Msg)
+viewTableOfContent screenConfig model =
+    Screen.TableOfContent.view TableOfContentMsg screenConfig model.tableOfContent
 
 
 viewStart : Screen.Config Msg -> Model -> List (Html Msg)

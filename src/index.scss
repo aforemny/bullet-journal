@@ -18,34 +18,21 @@
 @import "edit-daily-spread";
 @import "edit-monthly-spread";
 @import "monthly-spread";
+@import "screen";
 @import "start";
-@import "table-of-contents";
+@import "table-of-content";
 
 
-html, body {
-  min-height: 100%;
-  display: flex;
-  flex-flow: row wrap;
+* {
+  box-sizing: border-box;
 }
 
+
 body {
-  flex: 1 1 100%;
-  align-self: stretch;
-  margin: 0;
+  min-height: 100vh;
 }
 
 .main {
-  display: flex;
-  flex-flow: row wrap;
-  width: 1140px;
-  max-width: calc(100% - 60px);
-  margin-left: auto;
-  margin-right: auto;
-
-  @include mobile {
-    margin: 0;
-    max-width: 100%;
-  }
 }
 
 .mdc-toolbar {

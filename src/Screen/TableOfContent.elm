@@ -1,4 +1,4 @@
-module Screen.Index exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
+module Screen.TableOfContent exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -269,28 +269,28 @@ view lift viewConfig model =
                 "menu"
         , additionalSections = []
         }
-    , Html.div [ class "index", viewConfig.fixedAdjust ]
+    , Html.div [ class "table-of-content", viewConfig.fixedAdjust ]
         [ card
             { cardConfig
                 | additionalAttributes =
-                    [ class "index__wrapper" ]
+                    [ class "table-of-content__wrapper" ]
             }
             { blocks =
                 [ cardBlock <|
                     Html.div []
                         [ Html.div
-                            [ class "index__primary" ]
+                            [ class "table-of-content__primary" ]
                             [ Html.h2
-                                [ class "index__title" ]
+                                [ class "table-of-content__title" ]
                                 [ text "Index" ]
                             , Html.h3
-                                [ class "index__subtitle" ]
+                                [ class "table-of-content__subtitle" ]
                                 [ text "Collections will show here, so you can quickly find them." ]
                             ]
                         , list
                             { listConfig
                                 | additionalAttributes =
-                                    [ class "index__items-wrapper" ]
+                                    [ class "table-of-content__items-wrapper" ]
                             }
                             (List.map Tuple.second <|
                                 List.sortBy Tuple.first <|
@@ -303,7 +303,7 @@ view lift viewConfig model =
                         , fab
                             { fabConfig
                                 | onClick = Just (lift NewSpreadClicked)
-                                , additionalAttributes = [ class "index__new-spread" ]
+                                , additionalAttributes = [ class "table-of-content__new-spread" ]
                             }
                             "add"
                         ]

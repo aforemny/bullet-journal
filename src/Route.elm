@@ -12,7 +12,7 @@ import Url.Parser exposing ((</>), s)
 
 
 type Route
-    = Index
+    = TableOfContent
     | Start
     | CollectionSpread (Parse.ObjectId CollectionSpread)
     | EditCollectionSpread (Parse.ObjectId CollectionSpread)
@@ -31,7 +31,7 @@ toString url =
             Start ->
                 ""
 
-            Index ->
+            TableOfContent ->
                 "index"
 
             MonthlySpread objectId ->
@@ -84,7 +84,7 @@ parseUrl =
     in
     Url.Parser.oneOf
         [ Url.Parser.map Start (s "")
-        , Url.Parser.map Index (s "index")
+        , Url.Parser.map TableOfContent (s "index")
         , Url.Parser.map (EditBullet Nothing) (s "bullet" </> s "new")
         , Url.Parser.map (EditBullet << Just) (s "bullet" </> objectId)
         , Url.Parser.map EditCollectionSpread

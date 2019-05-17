@@ -90,7 +90,7 @@ update lift viewConfig msg model =
 
         BackClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.TableOfContent)
             )
 
         DeleteClicked ->
@@ -115,7 +115,7 @@ update lift viewConfig msg model =
 
         DeleteResult (Ok _) ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Index)
+            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.TableOfContent)
             )
 
         TitleChanged title ->

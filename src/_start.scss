@@ -1,35 +1,26 @@
-.index {
+.start {
   flex: 1 1 100%;
 
-  &__wrapper {
-    flex: 1 1 100%;
-    max-height: calc(100% - 64px);
-    position: relative;
-  }
-
-  &__primary {
+  &__input-card {
     padding: 1rem;
+
+    @include mobile {
+      padding: 0.5rem 1rem;
+    }
   }
 
-  &__title {
-    @include mdc-typography(headline5);
-    margin: 0;
-  }
+  .mdc-chip-set,
+  &__daily-bullets,
+  &__monthly-bullets {
+    margin-top: 1rem;
 
-  &__subtitle {
-    @include mdc-typography(subtitle2);
-    @include mdc-theme-prop(color, text-secondary-on-background);
-    margin: 0;
-  }
-
-  &__items-wrapper {
-    border-top: 1px solid #ccc;
-    overflow-y: auto;
-  }
-
-  &__new-spread {
-    position: absolute;
-    top: calc(#{2rem + 1.375rem + 2rem} - #{56px/2});
-    right: 2rem;
+    &__title {
+      margin: 0;
+      padding: 8px 16px 0;
+      line-height: 1;
+      text-align: right;
+      @include mdc-typography(headline6);
+      @include mdc-theme-prop(color, text-hint-on-background);
+    }
   }
 }
