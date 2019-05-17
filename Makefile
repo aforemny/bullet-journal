@@ -10,8 +10,13 @@ install: build
 	rsync -r imgs $(PREFIX)
 	cp src/elm.js $(PREFIX)/elm.js
 	cp src/index.css $(PREFIX)/index.css
+	cp src/index.js $(PREFIX)/index.js
 
-build: src/elm.js src/index.css
+build: src/elm.js src/index.css src/index.js
+
+
+src/index.js: src/app.js src/elm.js
+	webpack --mode=development
 
 
 src/elm.js: src/*.elm src/**/*.elm

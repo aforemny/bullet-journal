@@ -20,6 +20,6 @@ type alias Config msg =
 
 type alias ToolbarConfig msg =
     { title : String
-    , menuIcon : Html msg
+    , menuIcon : Maybe (Html msg)
     , additionalSections : List (Html msg)
     }

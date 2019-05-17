@@ -216,15 +216,13 @@ view lift ({ today } as viewConfig) model =
                     )
     in
     [ viewConfig.topAppBar
-        { title = "Index"
-        , menuIcon =
-            iconButton
-                { iconButtonConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
-                "menu"
+        { title = "Overview"
+        , menuIcon = Nothing
         , additionalSections = []
         }
     , Html.div
-        [ class "start screen"
+        [ class "start"
+        , class "screen screen--scrollable"
         , viewConfig.fixedAdjust
         ]
         [ Html.div [ class "screen__wrapper" ]

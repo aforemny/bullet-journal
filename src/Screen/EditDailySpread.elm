@@ -201,12 +201,13 @@ view lift viewConfig model =
                 |> Maybe.map DailySpread.title
                 |> Maybe.withDefault ""
         , menuIcon =
-            iconButton
-                { iconButtonConfig
-                    | onClick = Just (lift BackClicked)
-                    , additionalAttributes = [ TopAppBar.navigationIcon ]
-                }
-                "arrow_back"
+            Just <|
+                iconButton
+                    { iconButtonConfig
+                        | onClick = Just (lift BackClicked)
+                        , additionalAttributes = [ TopAppBar.navigationIcon ]
+                    }
+                    "arrow_back"
         , additionalSections =
             []
         }

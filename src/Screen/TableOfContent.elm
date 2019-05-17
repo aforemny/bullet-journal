@@ -263,56 +263,45 @@ view lift viewConfig model =
                 model.collectionSpreads
     in
     [ viewConfig.topAppBar
-        { title = "Index"
-        , menuIcon =
-            iconButton
-                { iconButtonConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
-                "menu"
+        { title = "Table of Content"
+        , menuIcon = Nothing
         , additionalSections = []
         }
-    , Html.div [ class "table-of-content", viewConfig.fixedAdjust ]
-        [ card
-            { cardConfig
-                | additionalAttributes =
-                    [ class "table-of-content__wrapper" ]
-            }
-            { blocks =
-                [ cardBlock <|
-                    Html.div []
-                        [ Html.div
-                            [ class "table-of-content__primary" ]
-                            [ Html.h2
-                                [ class "table-of-content__title" ]
-                                [ text "Index" ]
-                            , Html.h3
-                                [ class "table-of-content__subtitle" ]
-                                [ text "Collections will show here, so you can quickly find them." ]
-                            ]
-                        , list
-                            { listConfig
-                                | additionalAttributes =
-                                    [ class "table-of-content__items-wrapper" ]
-                            }
-                            (List.map Tuple.second <|
-                                List.sortBy Tuple.first <|
-                                    List.concat
-                                        [ monthlySpreads
-                                        , dailySpreads
-                                        , collectionSpreads
-                                        ]
-                            )
-                        , fab
-                            { fabConfig
-                                | onClick = Just (lift NewSpreadClicked)
-                                , additionalAttributes = [ class "table-of-content__new-spread" ]
-                            }
-                            "add"
-                        ]
-                ]
-            , actions = Nothing
-            }
-        , newSpreadDialog lift viewConfig model
+    , Html.div
+        [ class "screen screen--seamless table-of-content"
+        , viewConfig.fixedAdjust
         ]
+        [ Html.div [ class "screen__wrapper" ]
+            [ Html.div
+                [ class "table-of-content__primary" ]
+                [ Html.h3
+                    [ class "table-of-content__subtitle" ]
+                    [ text "Collections will show here, so you can quickly find them."
+                    ]
+                ]
+            , list
+                { listConfig
+                    | additionalAttributes =
+                        [ class "table-of-content__items-wrapper" ]
+                }
+                (List.map Tuple.second <|
+                    List.sortBy Tuple.first <|
+                        List.concat
+                            [ monthlySpreads
+                            , dailySpreads
+                            , collectionSpreads
+                            ]
+                )
+            , fab
+                { fabConfig
+                    | onClick = Just (lift NewSpreadClicked)
+                    , additionalAttributes =
+                        [ class "screen__fab" ]
+                }
+                "add"
+            ]
+        ]
+    , newSpreadDialog lift viewConfig model
     ]
 
 

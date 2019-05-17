@@ -270,13 +270,14 @@ view lift viewConfig model =
                 |> Maybe.map ((++) "Edit " << ObjectId.toString)
                 |> Maybe.withDefault "New bullet"
         , menuIcon =
-            iconButton
-                { iconButtonConfig
-                    | onClick = Just (lift BackClicked)
-                    , additionalAttributes =
-                        [ TopAppBar.navigationIcon ]
-                }
-                "arrow_back"
+            Just <|
+                iconButton
+                    { iconButtonConfig
+                        | onClick = Just (lift BackClicked)
+                        , additionalAttributes =
+                            [ TopAppBar.navigationIcon ]
+                    }
+                    "arrow_back"
         , additionalSections = []
         }
     , Html.div
@@ -419,12 +420,22 @@ bulletForm lift model =
                     [ text "Spread" ]
                 , Html.div
                     [ class "edit-bullet__spread-wrapper" ]
-                    [ textField
-                        { textFieldConfig
+                    [ filledSelect
+                        { selectConfig
                             | label = "Spread"
-                            , value = Just (Maybe.withDefault "" (Maybe.map ObjectId.toString model.spreadId))
-                            , disabled = True
+                            , value =
+                                Just
+                                    (Maybe.withDefault ""
+                                        (Maybe.map ObjectId.toString model.spreadId)
+                                    )
                         }
+                        (List.map
+                            (\spread ->
+                                selectOption selectOptionConfig
+                                    [ text (ObjectId.toString spread.objectId) ]
+                            )
+                            []
+                        )
                     ]
                 ]
 

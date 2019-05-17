@@ -4,34 +4,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta charset="utf-8">
     <link href="index.css" rel="stylesheet" type="text/css" />
-    <script src="elm.js"></script>
   </head>
   <body class="mdc-typography">
     <div id="root"></div>
-    <script>
-    var getToday = function() {
-      var now = new Date();
-      return '' + now.getFullYear() + '-' + (1 + now.getMonth()) + "-" + now.getDate();
-    };
-
-    var app = Elm.Main.init({
-      node: document.querySelector("#root"),
-      flags: {
-        today: getToday(),
-        now: ''+new Date(),
-      }
-    });
-
-    var updateToday = function() {
-      app.ports.todayUnsafe.send(getToday());
-      window.setTimeout(updateToday, 10*1000);
-    };
-    window.setTimeout(updateToday, 10*1000);
-
-    var updateNow = function() {
-      app.ports.nowUnsafe.send('' + new Date());
-      window.setTimeout(updateNow, 500);
-    };
-    updateNow();
-    </script>
+    <script src="index.js"></script>
   </body>

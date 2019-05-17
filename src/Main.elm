@@ -8,6 +8,9 @@ import Html.Attributes exposing (class, style)
 import Html.Events
 import Json.Decode as Decode exposing (Value)
 import Material.Button exposing (buttonConfig, textButton)
+import Material.Drawer exposing (drawerConfig, drawerScrim, modalDrawer)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
+import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic)
 import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
 import Parse
 import Parse.Private.ObjectId as ObjectId
@@ -52,6 +55,7 @@ type alias Model =
     , now : Time.Posix
     , error : Maybe Parse.Error
     , timeZone : Time.Zone
+    , drawerOpen : Bool
     }
 
 
@@ -72,6 +76,7 @@ defaultModel key =
     , error = Nothing
     , timeZone = Time.utc
     , key = key
+    , drawerOpen = False
     }
 
 
@@ -91,10 +96,14 @@ type Msg
     | EditMonthlySpreadMsg (Screen.EditMonthlySpread.Msg Msg)
     | TodayClicked
     | TodayClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
-    | MonthClicked
-    | MonthClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
+    | ThisMonthClicked
+    | ThisMonthClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url
+    | StartClicked
+    | TableOfContentClicked
+    | DrawerClosed
+    | OpenDrawerClicked
 
 
 type alias Flags =
@@ -367,13 +376,13 @@ update msg model =
                 (Route.toString (Route.DailySpread dailySpreadId))
             )
 
-        MonthClicked ->
+        ThisMonthClicked ->
             let
                 ( year, month, _ ) =
                     Calendar.toGregorian model.today
             in
             ( model
-            , Task.attempt MonthClickedResult
+            , Task.attempt ThisMonthClickedResult
                 (MonthlySpread.getBy screenConfig.parse year month
                     |> Task.andThen
                         (\dailySpread_ ->
@@ -388,10 +397,10 @@ update msg model =
                 )
             )
 
-        MonthClickedResult (Err err) ->
+        ThisMonthClickedResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
-        MonthClickedResult (Ok monthlySpreadId) ->
+        ThisMonthClickedResult (Ok monthlySpreadId) ->
             ( model
             , Browser.Navigation.pushUrl model.key
                 (Route.toString (Route.MonthlySpread monthlySpreadId))
@@ -409,6 +418,22 @@ update msg model =
             ( { model | url = Route.fromUrl url }, Cmd.none )
                 |> andThenInitScreen screenConfig (Route.fromUrl url)
 
+        StartClicked ->
+            ( model
+            , Browser.Navigation.pushUrl model.key (Route.toString Route.Start)
+            )
+
+        TableOfContentClicked ->
+            ( model
+            , Browser.Navigation.pushUrl model.key (Route.toString Route.TableOfContent)
+            )
+
+        DrawerClosed ->
+            ( { model | drawerOpen = False }, Cmd.none )
+
+        OpenDrawerClicked ->
+            ( { model | drawerOpen = True }, Cmd.none )
+
 
 makeScreenConfig : Model -> Screen.Config Msg
 makeScreenConfig model =
@@ -419,13 +444,22 @@ makeScreenConfig model =
                     (List.concat
                         [ [ TopAppBar.section [ TopAppBar.alignStart ]
                                 [ config.menuIcon
+                                    |> Maybe.withDefault
+                                        (iconButton
+                                            { iconButtonConfig
+                                                | onClick = Just OpenDrawerClicked
+                                                , additionalAttributes =
+                                                    [ TopAppBar.navigationIcon ]
+                                            }
+                                            "menu"
+                                        )
                                 , Html.h1 [ TopAppBar.title ] [ text config.title ]
                                 ]
                           ]
                         , [ TopAppBar.section [ TopAppBar.alignStart ]
                                 [ textButton
                                     { buttonConfig
-                                        | onClick = Just MonthClicked
+                                        | onClick = Just ThisMonthClicked
                                     }
                                     "Month"
                                 , textButton
@@ -456,39 +490,84 @@ view model =
     { title = "Bujo"
     , body =
         [ Html.div [ class "main" ]
-            (case model.url of
-                Route.Start ->
-                    viewStart screenConfig model
-
-                Route.TableOfContent ->
-                    viewTableOfContent screenConfig model
-
-                Route.MonthlySpread objectId ->
-                    viewMonthlySpread screenConfig model
-
-                Route.DailySpread objectId ->
-                    viewDailySpread screenConfig model
-
-                Route.CollectionSpread objectId ->
-                    viewCollectionSpread screenConfig model
-
-                Route.EditMonthlySpread objectId ->
-                    viewEditMonthlySpread screenConfig model
-
-                Route.EditDailySpread objectId ->
-                    viewEditDailySpread screenConfig model
-
-                Route.EditCollectionSpread objectId ->
-                    viewEditCollectionSpread screenConfig model
-
-                Route.NotFound urlString ->
-                    viewNotFound screenConfig urlString model
-
-                Route.EditBullet _ ->
-                    viewEditBullet screenConfig model
-            )
+            (drawer model ++ content screenConfig model)
         ]
     }
+
+
+content screenConfig model =
+    [ Html.div [ class "main__content" ]
+        (case model.url of
+            Route.Start ->
+                viewStart screenConfig model
+
+            Route.TableOfContent ->
+                viewTableOfContent screenConfig model
+
+            Route.MonthlySpread objectId ->
+                viewMonthlySpread screenConfig model
+
+            Route.DailySpread objectId ->
+                viewDailySpread screenConfig model
+
+            Route.CollectionSpread objectId ->
+                viewCollectionSpread screenConfig model
+
+            Route.EditMonthlySpread objectId ->
+                viewEditMonthlySpread screenConfig model
+
+            Route.EditDailySpread objectId ->
+                viewEditDailySpread screenConfig model
+
+            Route.EditCollectionSpread objectId ->
+                viewEditCollectionSpread screenConfig model
+
+            Route.NotFound urlString ->
+                viewNotFound screenConfig urlString model
+
+            Route.EditBullet _ ->
+                viewEditBullet screenConfig model
+        )
+    ]
+
+
+drawer model =
+    [ modalDrawer
+        { drawerConfig
+            | open = model.drawerOpen
+            , onClose = Just DrawerClosed
+        }
+        [ list listConfig
+            (List.map
+                (\{ label, activated, onClick } ->
+                    listItem
+                        { listItemConfig
+                            | activated = activated
+                            , onClick = Just onClick
+                        }
+                        [ text label ]
+                )
+                [ { label = "Start"
+                  , activated = model.url == Route.Start
+                  , onClick = StartClicked
+                  }
+                , { label = "Today"
+                  , activated = False
+                  , onClick = TodayClicked
+                  }
+                , { label = "This month"
+                  , activated = False
+                  , onClick = ThisMonthClicked
+                  }
+                , { label = "Index"
+                  , activated = model.url == Route.TableOfContent
+                  , onClick = TableOfContentClicked
+                  }
+                ]
+            )
+        ]
+    , drawerScrim [] []
+    ]
 
 
 viewMonthlySpread : Screen.Config Msg -> Model -> List (Html Msg)

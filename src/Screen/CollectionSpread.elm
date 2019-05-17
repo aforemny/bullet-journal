@@ -130,12 +130,13 @@ view lift viewConfig model =
     [ viewConfig.topAppBar
         { title = title
         , menuIcon =
-            iconButton
-                { iconButtonConfig
-                    | onClick = Just (lift BackClicked)
-                    , additionalAttributes = [ TopAppBar.navigationIcon ]
-                }
-                "arrow_back"
+            Just <|
+                iconButton
+                    { iconButtonConfig
+                        | onClick = Just (lift BackClicked)
+                        , additionalAttributes = [ TopAppBar.navigationIcon ]
+                    }
+                    "arrow_back"
         , additionalSections =
             [ TopAppBar.section [ TopAppBar.alignEnd ]
                 [ textButton

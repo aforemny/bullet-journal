@@ -5,5 +5,22 @@
 }
 
 .screen__wrapper {
+  display: flex;
+  flex-flow: column nowrap;
+}
+
+.screen:not(.screen--seamless) .screen__wrapper {
   padding: 24px;
+}
+
+.screen:not(.screen--scrollable) .screen__wrapper {
+  min-height: calc(100vh - 56px);
+  max-height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+.screen__fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
 }
