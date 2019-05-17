@@ -9,7 +9,7 @@ import Json.Encode as Encode
 import Material.Card exposing (card, cardBlock, cardConfig, cardPrimaryAction, cardPrimaryActionConfig)
 import Material.Chip.Choice as Chip exposing (choiceChip, choiceChipConfig)
 import Material.ChipSet exposing (choiceChipSet)
-import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
@@ -218,7 +218,8 @@ view lift ({ today } as viewConfig) model =
     [ viewConfig.topAppBar
         { title = "Index"
         , menuIcon =
-            icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
+            iconButton
+                { iconButtonConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
                 "menu"
         , additionalSections = []
         }

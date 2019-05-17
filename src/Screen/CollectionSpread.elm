@@ -6,7 +6,7 @@ import Html.Attributes exposing (class, style)
 import Html.Events
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Card exposing (card, cardBlock, cardConfig)
-import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig)
 import Material.TopAppBar as TopAppBar
 import Parse
@@ -130,12 +130,10 @@ view lift viewConfig model =
     [ viewConfig.topAppBar
         { title = title
         , menuIcon =
-            icon
-                { iconConfig
-                    | additionalAttributes =
-                        [ TopAppBar.navigationIcon
-                        , Html.Events.onClick (lift BackClicked)
-                        ]
+            iconButton
+                { iconButtonConfig
+                    | onClick = Just (lift BackClicked)
+                    , additionalAttributes = [ TopAppBar.navigationIcon ]
                 }
                 "arrow_back"
         , additionalSections =

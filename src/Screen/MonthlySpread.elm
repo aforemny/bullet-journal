@@ -8,7 +8,7 @@ import Html.Events
 import Json.Decode as Decode exposing (Decoder)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Card exposing (card, cardBlock, cardConfig)
-import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
@@ -188,12 +188,10 @@ view lift viewConfig model =
     [ viewConfig.topAppBar
         { title = title
         , menuIcon =
-            icon
-                { iconConfig
-                    | additionalAttributes =
-                        [ TopAppBar.navigationIcon
-                        , Html.Events.onClick (lift BackClicked)
-                        ]
+            iconButton
+                { iconButtonConfig
+                    | onClick = Just (lift BackClicked)
+                    , additionalAttributes = [ TopAppBar.navigationIcon ]
                 }
                 "arrow_back"
         , additionalSections =

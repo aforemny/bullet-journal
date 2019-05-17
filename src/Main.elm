@@ -407,6 +407,7 @@ update msg model =
 
         UrlChanged url ->
             ( { model | url = Route.fromUrl url }, Cmd.none )
+                |> andThenInitScreen screenConfig (Route.fromUrl url)
 
 
 makeScreenConfig : Model -> Screen.Config Msg

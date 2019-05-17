@@ -7,7 +7,7 @@ import Html.Events
 import Material.Button exposing (buttonConfig, raisedButton, textButton)
 import Material.Checkbox exposing (checkbox, checkboxConfig)
 import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
-import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.Select exposing (filledSelect, selectConfig, selectOption, selectOptionConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
@@ -270,12 +270,11 @@ view lift viewConfig model =
                 |> Maybe.map ((++) "Edit " << ObjectId.toString)
                 |> Maybe.withDefault "New bullet"
         , menuIcon =
-            icon
-                { iconConfig
-                    | additionalAttributes =
-                        [ TopAppBar.navigationIcon
-                        , Html.Events.onClick (lift BackClicked)
-                        ]
+            iconButton
+                { iconButtonConfig
+                    | onClick = Just (lift BackClicked)
+                    , additionalAttributes =
+                        [ TopAppBar.navigationIcon ]
                 }
                 "arrow_back"
         , additionalSections = []

@@ -8,7 +8,7 @@ import Material.Button exposing (buttonConfig, textButton)
 import Material.Card exposing (card, cardBlock, cardConfig)
 import Material.Dialog exposing (cancelButton, dialog, dialogConfig)
 import Material.Fab exposing (fab, fabConfig)
-import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TopAppBar as TopAppBar
 import Parse
@@ -265,7 +265,8 @@ view lift viewConfig model =
     [ viewConfig.topAppBar
         { title = "Index"
         , menuIcon =
-            icon { iconConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
+            iconButton
+                { iconButtonConfig | additionalAttributes = [ TopAppBar.navigationIcon ] }
                 "menu"
         , additionalSections = []
         }
