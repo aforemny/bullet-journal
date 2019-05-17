@@ -34,7 +34,7 @@ node_modules:
 clean:
 	rm -rf elm-stuff/build-artifacts
 	rm -rf $(PREFIX)
-	rm -f src/index.css src/elm.js
+	rm -f src/index.css src/elm.js src/index.js
 
 
 distclean: clean
