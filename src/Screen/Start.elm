@@ -10,7 +10,7 @@ import Material.Card exposing (card, cardBlock, cardConfig, cardPrimaryAction, c
 import Material.Chip.Choice as Chip exposing (choiceChip, choiceChipConfig)
 import Material.ChipSet exposing (choiceChipSet)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemPrimaryText, listItemSecondaryText, listItemText)
+import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemMeta, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.Theme as Theme
 import Material.TopAppBar as TopAppBar
@@ -530,15 +530,7 @@ viewBulletMonthly lift viewConfig model bullet =
                 , Html.Events.onClick (lift (BulletClicked bullet))
                 ]
         }
-        (listItemGraphic [] []
-            :: text bullet.text
-            :: (date
-                    |> Maybe.map
-                        (\date_ ->
-                            [ text "\u{00A0}"
-                            , Html.span [ Theme.textHintOnBackground ] [ text date_ ]
-                            ]
-                        )
-                    |> Maybe.withDefault []
-               )
-        )
+        [ listItemGraphic [] []
+        , text bullet.text
+        , listItemMeta [] [ text (Maybe.withDefault "" date) ]
+        ]

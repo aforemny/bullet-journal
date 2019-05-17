@@ -296,22 +296,6 @@ view config bullet =
             | additionalAttributes =
                 [ class "bullet", stateCs ] ++ config.additionalOptions
         }
-        [ listItemGraphic []
-            [ case ( bullet.ctor, bullet.taskState ) of
-                ( Event, _ ) ->
-                    icon iconConfig "radio_button_unchecked"
-
-                ( Note, _ ) ->
-                    icon iconConfig "indeterminate_check_box"
-
-                ( Task, Just Checked ) ->
-                    icon iconConfig "check_box"
-
-                ( Task, Just Migrated ) ->
-                    icon iconConfig "check_box"
-
-                ( Task, _ ) ->
-                    icon iconConfig "check_box_outline_blank"
-            ]
+        [ listItemGraphic [] []
         , listItemText [] [ text bullet.text ]
         ]

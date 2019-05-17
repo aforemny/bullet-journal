@@ -1,4 +1,12 @@
-module Screen.DailySpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.DailySpread exposing
+    ( Model
+    , Msg(..)
+    , defaultModel
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Dict exposing (Dict)
@@ -8,6 +16,7 @@ import Html.Events
 import Json.Decode as Decode exposing (Decoder)
 import Material.Button exposing (buttonConfig, raisedButton, textButton)
 import Material.Card exposing (card, cardBlock, cardConfig)
+import Material.Fab exposing (fab, fabConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig)
 import Material.TopAppBar as TopAppBar
@@ -15,6 +24,7 @@ import Parse
 import Route exposing (Route)
 import Screen
 import Task
+import Time
 import Time.Calendar.Gregorian as Calendar
 import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
@@ -112,6 +122,39 @@ view lift viewConfig model =
                 ++ "-"
                 ++ String.fromInt
                     model.date.dayOfMonth
+
+        sortedBullets =
+            model.bullets
+                |> List.filter
+                    (\bullet ->
+                        case bullet.date of
+                            Bullet.MonthDate { year, month } ->
+                                year == model.date.year && month == model.date.month
+
+                            Bullet.DayDate { year, month, dayOfMonth } ->
+                                (year == model.date.year)
+                                    && (month == model.date.month)
+                                    && (dayOfMonth == model.date.dayOfMonth)
+                    )
+                |> List.sortBy
+                    (\bullet ->
+                        let
+                            stateSort =
+                                case bullet.ctor of
+                                    Bullet.Task ->
+                                        0
+
+                                    Bullet.Note ->
+                                        1
+
+                                    Bullet.Event ->
+                                        2
+
+                            createdAtSort =
+                                Time.posixToMillis bullet.createdAt
+                        in
+                        ( stateSort, createdAtSort )
+                    )
     in
     [ viewConfig.topAppBar
         { title = title
@@ -123,50 +166,54 @@ view lift viewConfig model =
                         , additionalAttributes = [ TopAppBar.navigationIcon ]
                     }
                     "arrow_back"
-        , additionalSections =
-            [ TopAppBar.section [ TopAppBar.alignEnd ]
-                [ textButton
-                    { buttonConfig
-                        | onClick = Just (lift NewBulletClicked)
-                    }
-                    "New bullet"
-                ]
-            ]
+        , additionalSections = []
         }
     , Html.div
-        [ class "daily-spread", viewConfig.fixedAdjust ]
-        [ card
-            { cardConfig
-                | additionalAttributes = [ class "daily-spread__wrapper" ]
-            }
-            { blocks =
-                [ cardBlock <|
-                    Html.div []
-                        [ Html.div [ class "daily-spread__primary" ]
-                            [ Html.div [ class "daily-spread__title" ] [ text title ]
-                            , Html.div [ class "daily-spread__subtitle" ]
-                                [ text "The Daily Log is designed for day-to-day use." ]
-                            ]
-                        , list
-                            { listConfig
-                                | additionalAttributes =
-                                    [ class "daily-spread__bullet-wrapper" ]
-                            }
-                            (List.map
-                                (\bullet ->
-                                    Bullet.view
-                                        { additionalOptions =
-                                            [ class "daily-spread__bullet"
-                                            , Html.Events.onClick (lift (BulletClicked bullet.objectId))
-                                            ]
-                                        }
-                                        (Bullet.fromParseObject bullet)
+        [ class "daily-spread"
+        , class "screen screen--scrollable"
+        , viewConfig.fixedAdjust
+        ]
+        [ Html.div [ class "screen__wrapper" ]
+            [ card
+                { cardConfig
+                    | additionalAttributes = [ class "daily-spread__wrapper" ]
+                }
+                { blocks =
+                    [ cardBlock <|
+                        Html.div []
+                            [ Html.div [ class "daily-spread__primary" ]
+                                [ Html.div [ class "daily-spread__title" ] [ text title ]
+                                , Html.div [ class "daily-spread__subtitle" ]
+                                    [ text "The Daily Log is designed for day-to-day use." ]
+                                ]
+                            , list
+                                { listConfig
+                                    | additionalAttributes =
+                                        [ class "daily-spread__bullet-wrapper" ]
+                                }
+                                (List.map
+                                    (\bullet ->
+                                        Bullet.view
+                                            { additionalOptions =
+                                                [ class "daily-spread__bullet"
+                                                , Html.Events.onClick (lift (BulletClicked bullet.objectId))
+                                                ]
+                                            }
+                                            (Bullet.fromParseObject bullet)
+                                    )
+                                    sortedBullets
                                 )
-                                model.bullets
-                            )
-                        ]
-                ]
-            , actions = Nothing
-            }
+                            , fab
+                                { fabConfig
+                                    | onClick = Just (lift NewBulletClicked)
+                                    , additionalAttributes =
+                                        [ class "screen__fab" ]
+                                }
+                                "add"
+                            ]
+                    ]
+                , actions = Nothing
+                }
+            ]
         ]
     ]

@@ -18,6 +18,11 @@ import Route exposing (Route)
 import Screen
 import Task
 import Time
+import Time.Calendar.Gregorian as Calendar
+import Time.Calendar.MonthDay as Calendar
+import Time.Calendar.OrdinalDate as Calendar
+import Time.Calendar.Week as Calendar
+import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 
 
@@ -329,6 +334,7 @@ view lift viewConfig model =
     ]
 
 
+bulletForm : (Msg msg -> msg) -> Model -> Html msg
 bulletForm lift model =
     let
         formButtons =
@@ -453,28 +459,137 @@ bulletForm lift model =
                 ]
 
         bulletDayOfMonth =
-            textField
-                { textFieldConfig
+            filledSelect
+                { selectConfig
                     | label = "DD"
                     , value = Just model.dayOfMonth
-                    , onInput = Just (lift << DayOfMonthChanged)
+                    , onChange = Just (lift << DayOfMonthChanged)
                 }
+                ((::)
+                    (selectOption { selectOptionConfig | value = "" } [ text "" ])
+                    (model.bullet
+                        |> Maybe.map
+                            (\bullet ->
+                                let
+                                    { year, month } =
+                                        case bullet.date of
+                                            Bullet.MonthDate date ->
+                                                { year = date.year
+                                                , month = date.month
+                                                }
+
+                                            Bullet.DayDate date ->
+                                                { year = date.year
+                                                , month = date.month
+                                                }
+
+                                    lastDayOfMonth =
+                                        Calendar.monthLength (Calendar.isLeapYear year)
+                                            month
+                                in
+                                List.range 1 lastDayOfMonth
+                                    |> List.map
+                                        (\dayOfMonth ->
+                                            let
+                                                day =
+                                                    Calendar.fromGregorian year
+                                                        month
+                                                        dayOfMonth
+                                            in
+                                            selectOption
+                                                { selectOptionConfig
+                                                    | value = String.fromInt dayOfMonth
+                                                }
+                                                [ text <|
+                                                    (case Calendar.dayOfWeek day of
+                                                        Calendar.Monday ->
+                                                            "Mo"
+
+                                                        Calendar.Tuesday ->
+                                                            "Tu"
+
+                                                        Calendar.Wednesday ->
+                                                            "We"
+
+                                                        Calendar.Thursday ->
+                                                            "Th"
+
+                                                        Calendar.Friday ->
+                                                            "Fr"
+
+                                                        Calendar.Saturday ->
+                                                            "Sa"
+
+                                                        Calendar.Sunday ->
+                                                            "Su"
+                                                    )
+                                                        ++ ", "
+                                                        ++ String.fromInt dayOfMonth
+                                                        ++ "."
+                                                ]
+                                        )
+                            )
+                        |> Maybe.withDefault []
+                    )
+                )
 
         bulletMonth =
-            textField
-                { textFieldConfig
+            filledSelect
+                { selectConfig
                     | label = "MM"
                     , value = Just model.month
-                    , onInput = Just (lift << MonthChanged)
+                    , onChange = Just (lift << MonthChanged)
                 }
+                (List.map
+                    (\month ->
+                        selectOption
+                            { selectOptionConfig | value = String.fromInt month }
+                            [ text
+                                (case Calendar.defaultTimeLocale of
+                                    Calendar.TimeLocale { months } ->
+                                        List.drop (month - 1) months
+                                            |> List.head
+                                            |> Maybe.map Tuple.second
+                                            |> Maybe.withDefault ""
+                                )
+                            ]
+                    )
+                    (List.range 1 12)
+                )
 
         bulletYear =
-            textField
-                { textFieldConfig
+            filledSelect
+                { selectConfig
                     | label = "YYYY"
                     , value = Just model.year
-                    , onInput = Just (lift << YearChanged)
+                    , onChange = Just (lift << YearChanged)
                 }
+                (model.bullet
+                    |> Maybe.map
+                        (\bullet ->
+                            List.map
+                                (\yearOffset ->
+                                    let
+                                        value =
+                                            String.fromInt <|
+                                                (case bullet.date of
+                                                    Bullet.MonthDate { year } ->
+                                                        year
+
+                                                    Bullet.DayDate { year } ->
+                                                        year
+                                                )
+                                                    + 50
+                                                    - yearOffset
+                                    in
+                                    selectOption
+                                        { selectOptionConfig | value = value }
+                                        [ text value ]
+                                )
+                                (List.range 0 100)
+                        )
+                    |> Maybe.withDefault []
+                )
 
         saveButton =
             raisedButton

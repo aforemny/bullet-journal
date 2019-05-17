@@ -6,4 +6,6 @@ logs
 node_modules
 _site
 site.css
+src/index.css
+src/index.js
 WORK

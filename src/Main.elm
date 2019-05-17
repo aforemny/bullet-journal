@@ -294,36 +294,21 @@ makeScreenConfig model =
         \config ->
             topAppBar { topAppBarConfig | fixed = True }
                 [ TopAppBar.row []
-                    (List.concat
-                        [ [ TopAppBar.section [ TopAppBar.alignStart ]
-                                [ config.menuIcon
-                                    |> Maybe.withDefault
-                                        (iconButton
-                                            { iconButtonConfig
-                                                | onClick = Just OpenDrawerClicked
-                                                , additionalAttributes =
-                                                    [ TopAppBar.navigationIcon ]
-                                            }
-                                            "menu"
-                                        )
-                                , Html.h1 [ TopAppBar.title ] [ text config.title ]
-                                ]
-                          ]
-                        , [ TopAppBar.section [ TopAppBar.alignStart ]
-                                [ textButton
-                                    { buttonConfig
-                                        | onClick = Just ThisMonthClicked
+                    ([ TopAppBar.section [ TopAppBar.alignStart ]
+                        [ config.menuIcon
+                            |> Maybe.withDefault
+                                (iconButton
+                                    { iconButtonConfig
+                                        | onClick = Just OpenDrawerClicked
+                                        , additionalAttributes =
+                                            [ TopAppBar.navigationIcon ]
                                     }
-                                    "Month"
-                                , textButton
-                                    { buttonConfig
-                                        | onClick = Just TodayClicked
-                                    }
-                                    "Today"
-                                ]
-                          ]
-                        , config.additionalSections
+                                    "menu"
+                                )
+                        , Html.h1 [ TopAppBar.title ] [ text config.title ]
                         ]
+                     ]
+                        ++ config.additionalSections
                     )
                 ]
     , fixedAdjust = TopAppBar.fixedAdjust
