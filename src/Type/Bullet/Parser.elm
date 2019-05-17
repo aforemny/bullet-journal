@@ -50,7 +50,7 @@ checkedTaskParser =
     bulletParser
         (symbol "[x]")
         (\text ->
-            { emptyTask | text = text, state = Bullet.Task Bullet.Checked }
+            { emptyTask | text = text, taskState = Just Bullet.Checked }
         )
 
 

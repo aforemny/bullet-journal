@@ -112,9 +112,12 @@ update lift ({ today, parse } as viewConfig) msg model =
                     Bullet.parse input
                         |> (\bullet_ ->
                                 { bullet_
-                                    | year = Just year
-                                    , month = Just month
-                                    , dayOfMonth = Just dayOfMonth
+                                    | date =
+                                        Bullet.DayDate
+                                            { year = year
+                                            , month = month
+                                            , dayOfMonth = dayOfMonth
+                                            }
                                 }
                            )
             in
@@ -151,7 +154,7 @@ update lift ({ today, parse } as viewConfig) msg model =
             )
 
         --        BulletClicked bullet ->
-        --            case bullet.state of
+        --            case bullet.ctor of
         --                Bullet.Task Bullet.Unchecked ->
         --                    ( model
         --                    , Task.attempt (lift << BulletMarkedDone)
@@ -191,16 +194,17 @@ view lift ({ today } as viewConfig) model =
                 |> List.filter
                     (\bullet ->
                         List.all identity
-                            [ bullet.state /= Bullet.Note
-                            , bullet.state /= Bullet.Task Bullet.Checked
+                            [ bullet.ctor /= Bullet.Note
+                            , bullet.ctor /= Bullet.Task
+                            , bullet.taskState /= Just Bullet.Checked
                             ]
                     )
                 |> List.sortBy
                     (\bullet ->
                         let
                             stateSort =
-                                case bullet.state of
-                                    Bullet.Task _ ->
+                                case bullet.ctor of
+                                    Bullet.Task ->
                                         0
 
                                     Bullet.Note ->
@@ -282,8 +286,8 @@ inputCard lift viewConfig model =
                 [ Just <|
                     choiceChip
                         choiceChipConfig
-                        (case bullet.state of
-                            Bullet.Task _ ->
+                        (case bullet.ctor of
+                            Bullet.Task ->
                                 "Task"
 
                             Bullet.Event ->
@@ -305,23 +309,30 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
             sortedBullets
                 |> List.filter
                     (\bullet ->
-                        (bullet.year == Just year)
-                            && (bullet.month == Just month)
-                            && (bullet.dayOfMonth == Just dayOfMonth)
+                        case bullet.date of
+                            Bullet.DayDate { year, month, dayOfMonth } ->
+                                List.all identity
+                                    [ year == yearToday
+                                    , month == monthToday
+                                    , dayOfMonth == dayOfMonthToday
+                                    ]
+
+                            Bullet.MonthDate { year, month } ->
+                                False
                     )
 
         title =
             String.join " "
                 [ case Calendar.defaultTimeLocale of
                     Calendar.TimeLocale { months } ->
-                        List.drop (month - 1) months
+                        List.drop (monthToday - 1) months
                             |> List.head
                             |> Maybe.map Tuple.first
                             |> Maybe.withDefault ""
-                , String.fromInt dayOfMonth
+                , String.fromInt dayOfMonthToday
                 ]
 
-        ( year, month, dayOfMonth ) =
+        ( yearToday, monthToday, dayOfMonthToday ) =
             Calendar.toGregorian today
     in
     card
@@ -345,22 +356,27 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
             sortedBullets
                 |> List.filter
                     (\bullet ->
-                        (bullet.year == Just year)
-                            && (bullet.month == Just month)
-                            && (Maybe.withDefault 0 bullet.dayOfMonth > dayOfMonth)
+                        case bullet.date of
+                            Bullet.DayDate { year, month, dayOfMonth } ->
+                                ( year, month, dayOfMonth )
+                                    > ( yearToday, monthToday, dayOfMonthToday )
+
+                            Bullet.MonthDate { year, month } ->
+                                ( year, month, 0 )
+                                    > ( yearToday, monthToday, dayOfMonthToday )
                     )
 
         title =
             String.join " "
                 [ case Calendar.defaultTimeLocale of
                     Calendar.TimeLocale { months } ->
-                        List.drop (month - 1) months
+                        List.drop (monthToday - 1) months
                             |> List.head
                             |> Maybe.map Tuple.first
                             |> Maybe.withDefault ""
                 ]
 
-        ( year, month, dayOfMonth ) =
+        ( yearToday, monthToday, dayOfMonthToday ) =
             Calendar.toGregorian today
     in
     card
@@ -385,17 +401,22 @@ upcomingEventsCard lift ({ today } as viewConfig) model sortedBullets =
                 |> List.filter
                     (\bullet ->
                         List.all identity
-                            [ bullet.state == Bullet.Event
-                            , Maybe.withDefault 0 bullet.year >= year
-                            , Maybe.withDefault 0 bullet.month >= month
-                            , Maybe.withDefault 0 bullet.dayOfMonth > dayOfMonth
+                            [ bullet.ctor == Bullet.Event
+                            , (case bullet.date of
+                                Bullet.DayDate { year, month, dayOfMonth } ->
+                                    ( year, month, dayOfMonth )
+
+                                Bullet.MonthDate { year, month } ->
+                                    ( year, month, 0 )
+                              )
+                                >= ( yearToday, monthToday, dayOfMonthToday )
                             ]
                     )
 
         title =
             "Upcoming events"
 
-        ( year, month, dayOfMonth ) =
+        ( yearToday, monthToday, dayOfMonthToday ) =
             Calendar.toGregorian today
     in
     card
@@ -420,19 +441,22 @@ backlogCard lift ({ today } as viewConfig) model sortedBullets =
                 |> List.filter
                     (\bullet ->
                         List.all identity
-                            [ bullet.state == Bullet.Task Bullet.Unchecked
-                            , ( Maybe.withDefault 0 bullet.year
-                              , Maybe.withDefault 0 bullet.month
-                              , Maybe.withDefault 0 bullet.dayOfMonth
+                            [ bullet.taskState == Just Bullet.Unchecked
+                            , (case bullet.date of
+                                Bullet.DayDate { year, month, dayOfMonth } ->
+                                    ( year, month, dayOfMonth )
+
+                                Bullet.MonthDate { year, month } ->
+                                    ( year, month, 0 )
                               )
-                                < ( year, month, dayOfMonth )
+                                < ( yearToday, monthToday, dayOfMonthToday )
                             ]
                     )
 
         title =
             "Backlog"
 
-        ( year, month, dayOfMonth ) =
+        ( yearToday, monthToday, dayOfMonthToday ) =
             Calendar.toGregorian today
     in
     card
@@ -455,21 +479,21 @@ bulletClass : Parse.Object Bullet -> String
 bulletClass bullet =
     String.join " "
         [ "bullet"
-        , case bullet.state of
-            Bullet.Event ->
+        , case ( bullet.ctor, bullet.taskState ) of
+            ( Bullet.Event, _ ) ->
                 "bullet--event"
 
-            Bullet.Note ->
+            ( Bullet.Note, _ ) ->
                 "bullet--note"
 
-            Bullet.Task Bullet.Unchecked ->
-                "bullet--task bullet--task--unchecked"
-
-            Bullet.Task Bullet.Checked ->
+            ( Bullet.Task, Just Bullet.Checked ) ->
                 "bullet--task bullet--task--checked"
 
-            Bullet.Task Bullet.Migrated ->
+            ( Bullet.Task, Just Bullet.Migrated ) ->
                 "bullet--task bullet--task--migrated"
+
+            ( Bullet.Task, _ ) ->
+                "bullet--task bullet--task--unchecked"
         ]
 
 
@@ -482,17 +506,17 @@ viewBullet :
 viewBullet lift viewConfig model bullet =
     let
         date =
-            case ( bullet.year, bullet.month, bullet.dayOfMonth ) of
-                ( Just year, Just month, Just day ) ->
+            case bullet.date of
+                Bullet.DayDate { year, month, dayOfMonth } ->
                     Just
-                        (String.fromInt day
+                        (String.fromInt dayOfMonth
                             ++ ".\u{00A0}"
                             ++ String.fromInt month
                             ++ "\u{00A0}"
                             ++ String.fromInt year
                         )
 
-                _ ->
+                Bullet.MonthDate _ ->
                     Nothing
     in
     listItem

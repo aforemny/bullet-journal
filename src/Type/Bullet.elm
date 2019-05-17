@@ -1,4 +1,4 @@
-module Type.Bullet exposing (Any(..), Bullet, Config, State(..), TaskState(..), anyObjectId, castObjectId, create, decode, decodeState, decodeTaskState, delete, empty, emptyEvent, emptyNote, emptyTask, encode, encodeState, encodeTaskState, fromParseObject, get, getOf, update, view)
+module Type.Bullet exposing (Bullet, Config, Ctor(..), Date(..), TaskState(..), create, decode, delete, emptyEvent, emptyNote, emptyTask, encode, fromParseObject, get, getOf, update, view)
 
 import Html exposing (Html, text)
 import Html.Attributes exposing (class, style)
@@ -17,174 +17,22 @@ import Time
 
 
 type alias Bullet =
-    { spreadClass : Maybe String
-    , spreadId : Maybe (Parse.ObjectId Any)
-    , state : State
+    { ctor : Ctor
+    , date : Date
     , text : String
-    , year : Maybe Int
-    , month : Maybe Int
-    , dayOfMonth : Maybe Int
+    , taskState : Maybe TaskState
     }
 
 
-empty : Bullet
-empty =
-    emptyNote
-
-
-emptyNote : Bullet
-emptyNote =
-    { spreadClass = Nothing
-    , spreadId = Nothing
-    , state = Note
-    , text = ""
-    , year = Nothing
-    , month = Nothing
-    , dayOfMonth = Nothing
-    }
-
-
-emptyTask : Bullet
-emptyTask =
-    { spreadClass = Nothing
-    , spreadId = Nothing
-    , state = Task Unchecked
-    , text = ""
-    , year = Nothing
-    , month = Nothing
-    , dayOfMonth = Nothing
-    }
-
-
-emptyEvent : Bullet
-emptyEvent =
-    { spreadClass = Nothing
-    , spreadId = Nothing
-    , state = Event
-    , text = ""
-    , year = Nothing
-    , month = Nothing
-    , dayOfMonth = Nothing
-    }
-
-
-fromParseObject : Parse.Object Bullet -> Bullet
-fromParseObject bullet =
-    { spreadClass = bullet.spreadClass
-    , spreadId = bullet.spreadId
-    , state = bullet.state
-    , text = bullet.text
-    , year = bullet.year
-    , month = bullet.month
-    , dayOfMonth = bullet.dayOfMonth
-    }
-
-
-encode : Bullet -> Value
-encode bullet =
-    Encode.object
-        [ ( "spreadClass", Maybe.withDefault Encode.null (Maybe.map Encode.string bullet.spreadClass) )
-        , ( "spreadId", Maybe.withDefault Encode.null (Maybe.map Parse.Encode.objectId bullet.spreadId) )
-        , ( "state", encodeState bullet.state )
-        , ( "text", Encode.string bullet.text )
-        , ( "year", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.year) )
-        , ( "month", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.month) )
-        , ( "dayOfMonth", Maybe.withDefault Encode.null (Maybe.map Encode.int bullet.dayOfMonth) )
-        ]
-
-
-decode : Decoder (Parse.Object Bullet)
-decode =
-    Decode.succeed
-        (\objectId createdAt updatedAt spreadClass spreadId state text year month dayOfMonth ->
-            { objectId = objectId
-            , createdAt = createdAt
-            , updatedAt = updatedAt
-            , spreadClass = spreadClass
-            , spreadId = spreadId
-            , state = state
-            , text = text
-            , year = year
-            , month = month
-            , dayOfMonth = dayOfMonth
-            }
-        )
-        |> Decode.required "objectId" Parse.Decode.objectId
-        |> Decode.required "createdAt" Parse.Decode.date
-        |> Decode.required "updatedAt" Parse.Decode.date
-        |> Decode.optional "spreadClass" (Decode.map Just Decode.string) Nothing
-        |> Decode.optional "spreadId" (Decode.map Just Parse.Decode.objectId) Nothing
-        |> Decode.required "state" decodeState
-        |> Decode.required "text" Decode.string
-        |> Decode.optional "year" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "month" (Decode.map Just Decode.int) Nothing
-        |> Decode.optional "dayOfMonth" (Decode.map Just Decode.int) Nothing
-
-
-type Any
-    = Any
-
-
-anyObjectId : Parse.ObjectId a -> Parse.ObjectId Any
-anyObjectId =
-    ObjectId.toString >> ObjectId.fromString
-
-
-castObjectId : Parse.ObjectId Any -> Parse.ObjectId b
-castObjectId =
-    ObjectId.toString >> ObjectId.fromString
-
-
-type State
-    = Event
+type Ctor
+    = Task
+    | Event
     | Note
-    | Task TaskState
 
 
-encodeState : State -> Value
-encodeState state =
-    case state of
-        Event ->
-            Encode.object [ ( "ctor", Encode.string "event" ) ]
-
-        Note ->
-            Encode.object [ ( "ctor", Encode.string "note" ) ]
-
-        Task taskState ->
-            Encode.object
-                [ ( "ctor", Encode.string "task" )
-                , ( "taskState", encodeTaskState taskState )
-                ]
-
-
-decodeState : Decoder State
-decodeState =
-    let
-        decodeEvent =
-            Decode.succeed Event
-
-        decodeNote =
-            Decode.succeed Note
-
-        decodeTask =
-            Decode.map Task (Decode.at [ "taskState" ] decodeTaskState)
-    in
-    Decode.at [ "ctor" ] Decode.string
-        |> Decode.andThen
-            (\ctor ->
-                case ctor of
-                    "event" ->
-                        decodeEvent
-
-                    "note" ->
-                        decodeNote
-
-                    "task" ->
-                        decodeTask
-
-                    _ ->
-                        Decode.fail ("expected event, note or task but got " ++ ctor)
-            )
+type Date
+    = MonthDate { year : Int, month : Int }
+    | DayDate { year : Int, month : Int, dayOfMonth : Int }
 
 
 type TaskState
@@ -193,18 +41,154 @@ type TaskState
     | Migrated
 
 
-encodeTaskState : TaskState -> Value
-encodeTaskState taskState =
+emptyNote : Bullet
+emptyNote =
+    { ctor = Note
+    , date = DayDate { year = 1970, month = 1, dayOfMonth = 1 }
+    , text = ""
+    , taskState = Nothing
+    }
+
+
+emptyTask : Bullet
+emptyTask =
+    { ctor = Task
+    , date = DayDate { year = 1970, month = 1, dayOfMonth = 1 }
+    , text = ""
+    , taskState = Nothing
+    }
+
+
+emptyEvent : Bullet
+emptyEvent =
+    { ctor = Event
+    , date = DayDate { year = 1970, month = 1, dayOfMonth = 1 }
+    , text = ""
+    , taskState = Nothing
+    }
+
+
+fromParseObject : Parse.Object Bullet -> Bullet
+fromParseObject bullet =
+    { ctor = bullet.ctor
+    , text = bullet.text
+    , date = bullet.date
+    , taskState = bullet.taskState
+    }
+
+
+encode : Bullet -> Value
+encode bullet =
+    Encode.object
+        [ ( "ctor", encodeCtor bullet.ctor )
+        , ( "text", Encode.string bullet.text )
+        , ( "date", encodeDate bullet.date )
+        , ( "taskState", encodeTaskState bullet.taskState )
+        ]
+
+
+encodeCtor ctor =
     Encode.string <|
-        case taskState of
-            Unchecked ->
-                "unchecked"
+        case ctor of
+            Event ->
+                "event"
 
-            Checked ->
-                "checked"
+            Note ->
+                "note"
 
-            Migrated ->
-                "migrated"
+            Task ->
+                "task"
+
+
+encodeDate date =
+    case date of
+        MonthDate { year, month } ->
+            Encode.object
+                [ ( "year", Encode.int year )
+                , ( "month", Encode.int month )
+                ]
+
+        DayDate { year, month, dayOfMonth } ->
+            Encode.object
+                [ ( "year", Encode.int year )
+                , ( "month", Encode.int month )
+                , ( "dayOfMonth", Encode.int dayOfMonth )
+                ]
+
+
+decodeDate =
+    Decode.succeed
+        (\year month maybeDayOfMonth ->
+            case maybeDayOfMonth of
+                Just dayOfMonth ->
+                    DayDate { year = year, month = month, dayOfMonth = dayOfMonth }
+
+                Nothing ->
+                    MonthDate { year = year, month = month }
+        )
+        |> Decode.required "year" Decode.int
+        |> Decode.required "month" Decode.int
+        |> Decode.optional "dayOfMonth" (Decode.map Just Decode.int) Nothing
+
+
+decodeCtor =
+    Decode.string
+        |> Decode.andThen
+            (\ctor ->
+                case ctor of
+                    "task" ->
+                        Decode.succeed Task
+
+                    "event" ->
+                        Decode.succeed Event
+
+                    "note" ->
+                        Decode.succeed Note
+
+                    _ ->
+                        Decode.fail ("unknown ctor: " ++ ctor)
+            )
+
+
+decode : Decoder (Parse.Object Bullet)
+decode =
+    Decode.succeed
+        (\objectId createdAt updatedAt ctor date text taskState ->
+            { objectId = objectId
+            , createdAt = createdAt
+            , updatedAt = updatedAt
+            , ctor = ctor
+            , date = date
+            , text = text
+            , taskState = taskState
+            }
+        )
+        |> Decode.required "objectId" Parse.Decode.objectId
+        |> Decode.required "createdAt" Parse.Decode.date
+        |> Decode.required "updatedAt" Parse.Decode.date
+        |> Decode.required "ctor" decodeCtor
+        |> Decode.required "date" decodeDate
+        |> Decode.required "text" Decode.string
+        |> Decode.optional "taskState" (Decode.map Just decodeTaskState) Nothing
+
+
+encodeTaskState : Maybe TaskState -> Value
+encodeTaskState maybeTaskState =
+    maybeTaskState
+        |> Maybe.map
+            (\taskState ->
+                Encode.string <|
+                    case taskState of
+                        Unchecked ->
+                            "unchecked"
+
+                        Checked ->
+                            "checked"
+
+                        Migrated ->
+                            "migrated"
+            )
+        |> Maybe.withDefault Encode.null
 
 
 decodeTaskState : Decoder TaskState
@@ -291,21 +275,21 @@ view : Config msg -> Bullet -> Html msg
 view config bullet =
     let
         stateCs =
-            case bullet.state of
-                Event ->
+            case ( bullet.ctor, bullet.taskState ) of
+                ( Event, _ ) ->
                     class "bullet--event"
 
-                Note ->
+                ( Note, _ ) ->
                     class "bullet--note"
 
-                Task Unchecked ->
-                    class "bullet--task bullet--task--unchecked"
-
-                Task Checked ->
+                ( Task, Just Checked ) ->
                     class "bullet--task bullet--task--checked"
 
-                Task Migrated ->
+                ( Task, Just Migrated ) ->
                     class "bullet--task bullet--task--migrated"
+
+                ( Task, _ ) ->
+                    class "bullet--task bullet--task--unchecked"
     in
     listItem
         { listItemConfig
@@ -313,21 +297,21 @@ view config bullet =
                 [ class "bullet", stateCs ] ++ config.additionalOptions
         }
         [ listItemGraphic []
-            [ case bullet.state of
-                Event ->
+            [ case ( bullet.ctor, bullet.taskState ) of
+                ( Event, _ ) ->
                     icon iconConfig "radio_button_unchecked"
 
-                Note ->
+                ( Note, _ ) ->
                     icon iconConfig "indeterminate_check_box"
 
-                Task Unchecked ->
+                ( Task, Just Checked ) ->
+                    icon iconConfig "check_box"
+
+                ( Task, Just Migrated ) ->
+                    icon iconConfig "check_box"
+
+                ( Task, _ ) ->
                     icon iconConfig "check_box_outline_blank"
-
-                Task Checked ->
-                    icon iconConfig "check_box"
-
-                Task Migrated ->
-                    icon iconConfig "check_box"
             ]
         , listItemText [] [ text bullet.text ]
         ]

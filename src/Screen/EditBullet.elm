@@ -28,7 +28,6 @@ type alias Model =
     { referringUrl : Route
     , bulletId : Maybe (Parse.ObjectId Bullet)
     , bullet : Maybe (Parse.Object Bullet)
-    , spreadId : Maybe (Parse.ObjectId Bullet.Any)
     , tipe : Tipe
     , taskState : Bullet.TaskState
     , text : String
@@ -57,7 +56,6 @@ defaultModel referringUrl bulletId =
     { referringUrl = referringUrl
     , bulletId = bulletId
     , bullet = Nothing
-    , spreadId = Nothing
     , tipe = Note
     , taskState = Bullet.Unchecked
     , text = ""
@@ -74,7 +72,6 @@ defaultModel referringUrl bulletId =
 
 type Msg msg
     = BulletResult (Result Parse.Error (Parse.Object Bullet))
-    | SpreadChanged (Maybe (Parse.ObjectId Bullet.Any))
     | TipeChanged Tipe
     | TaskStateChanged Bullet.TaskState
     | TextChanged String
@@ -145,9 +142,6 @@ update lift viewConfig msg model =
         YearChanged year ->
             ( { model | year = year }, Cmd.none )
 
-        SpreadChanged spreadId ->
-            ( { model | spreadId = spreadId }, Cmd.none )
-
         TipeChanged tipe ->
             ( { model
                 | tipe = tipe
@@ -164,10 +158,10 @@ update lift viewConfig msg model =
 
         SaveClicked ->
             let
-                state =
+                ctor =
                     case model.tipe of
                         Task ->
-                            Bullet.Task model.taskState
+                            Bullet.Task
 
                         Event ->
                             Bullet.Event
@@ -175,27 +169,49 @@ update lift viewConfig msg model =
                         Note ->
                             Bullet.Note
 
-                bullet =
-                    { spreadClass = Nothing
-                    , spreadId = model.spreadId
-                    , state = state
-                    , text = model.text
-                    , year = String.toInt model.year
-                    , month = String.toInt model.month
-                    , dayOfMonth = String.toInt model.dayOfMonth
-                    }
+                maybeBullet =
+                    Maybe.map2
+                        (\year month ->
+                            { ctor = ctor
+                            , text = model.text
+                            , date =
+                                case String.toInt model.dayOfMonth of
+                                    Just dayOfMonth ->
+                                        Bullet.DayDate
+                                            { year = year
+                                            , month = month
+                                            , dayOfMonth = dayOfMonth
+                                            }
+
+                                    Nothing ->
+                                        Bullet.MonthDate { year = year, month = month }
+                            , taskState =
+                                if ctor == Bullet.Task then
+                                    Just model.taskState
+
+                                else
+                                    Nothing
+                            }
+                        )
+                        (String.toInt model.year)
+                        (String.toInt model.month)
             in
             ( model
-            , model.bulletId
+            , maybeBullet
                 |> Maybe.map
-                    (\bulletId ->
-                        Task.attempt (lift << UpdateResult)
-                            (Bullet.update viewConfig.parse bulletId bullet)
+                    (\bullet ->
+                        model.bulletId
+                            |> Maybe.map
+                                (\bulletId ->
+                                    Task.attempt (lift << UpdateResult)
+                                        (Bullet.update viewConfig.parse bulletId bullet)
+                                )
+                            |> Maybe.withDefault
+                                (Task.attempt (lift << CreateResult)
+                                    (Bullet.create viewConfig.parse bullet)
+                                )
                     )
-                |> Maybe.withDefault
-                    (Task.attempt (lift << CreateResult)
-                        (Bullet.create viewConfig.parse bullet)
-                    )
+                |> Maybe.withDefault Cmd.none
             )
 
         UpdateResult (Err err) ->
@@ -256,30 +272,38 @@ update lift viewConfig msg model =
             ( { model
                 | bullet = Just bullet
                 , tipe =
-                    case bullet.state of
+                    case bullet.ctor of
                         Bullet.Event ->
                             Event
 
                         Bullet.Note ->
                             Note
 
-                        Bullet.Task _ ->
+                        Bullet.Task ->
                             Task
-                , taskState =
-                    case bullet.state of
-                        Bullet.Event ->
-                            Bullet.Unchecked
-
-                        Bullet.Note ->
-                            Bullet.Unchecked
-
-                        Bullet.Task taskState ->
-                            taskState
+                , taskState = Maybe.withDefault Bullet.Unchecked bullet.taskState
                 , text = bullet.text
-                , year = Maybe.withDefault "" (Maybe.map String.fromInt bullet.year)
-                , month = Maybe.withDefault "" (Maybe.map String.fromInt bullet.month)
+                , year =
+                    case bullet.date of
+                        Bullet.DayDate { year } ->
+                            String.fromInt year
+
+                        Bullet.MonthDate { year } ->
+                            String.fromInt year
+                , month =
+                    case bullet.date of
+                        Bullet.DayDate { month } ->
+                            String.fromInt month
+
+                        Bullet.MonthDate { month } ->
+                            String.fromInt month
                 , dayOfMonth =
-                    Maybe.withDefault "" (Maybe.map String.fromInt bullet.dayOfMonth)
+                    case bullet.date of
+                        Bullet.DayDate { dayOfMonth } ->
+                            String.fromInt dayOfMonth
+
+                        Bullet.MonthDate _ ->
+                            ""
               }
             , Cmd.none
             )
@@ -453,82 +477,6 @@ bulletForm lift model =
                     ]
                 ]
 
-        bulletSpread =
-            Html.div
-                [ class "edit-bullet__spread" ]
-                [ Html.div
-                    [ class "edit-bullet__headline" ]
-                    [ text "Spread" ]
-                , Html.div
-                    [ class "edit-bullet__spread-wrapper" ]
-                    [ filledSelect
-                        { selectConfig
-                            | label = "Spread"
-                            , onChange =
-                                Just
-                                    (\value ->
-                                        lift
-                                            (SpreadChanged
-                                                (if value /= "" then
-                                                    Just (ObjectId.fromString value)
-
-                                                 else
-                                                    Nothing
-                                                )
-                                            )
-                                    )
-                            , value =
-                                Just
-                                    (Maybe.withDefault ""
-                                        (Maybe.map ObjectId.toString model.spreadId)
-                                    )
-                        }
-                        (List.concat
-                            [ [ selectOption selectOptionConfig [ text "" ] ]
-                            , List.map
-                                (\spread ->
-                                    selectOption
-                                        { selectOptionConfig
-                                            | value = ObjectId.toString spread.objectId
-                                        }
-                                        [ text
-                                            (String.fromInt spread.year
-                                                ++ "-"
-                                                ++ String.fromInt spread.month
-                                                ++ "-"
-                                                ++ String.fromInt spread.dayOfMonth
-                                            )
-                                        ]
-                                )
-                                model.dailySpreads
-                            , List.map
-                                (\spread ->
-                                    selectOption
-                                        { selectOptionConfig
-                                            | value = ObjectId.toString spread.objectId
-                                        }
-                                        [ text
-                                            (String.fromInt spread.year
-                                                ++ "-"
-                                                ++ String.fromInt spread.month
-                                            )
-                                        ]
-                                )
-                                model.monthlySpreads
-                            , List.map
-                                (\spread ->
-                                    selectOption
-                                        { selectOptionConfig
-                                            | value = ObjectId.toString spread.objectId
-                                        }
-                                        [ text spread.title ]
-                                )
-                                model.collectionSpreads
-                            ]
-                        )
-                    ]
-                ]
-
         bulletDate =
             Html.div
                 [ class "edit-bullet__bullet-date" ]
@@ -587,7 +535,6 @@ bulletForm lift model =
         [ bulletTipe
         , bulletText
         , bulletDate
-        , bulletSpread
         , formButtons
         ]
 
