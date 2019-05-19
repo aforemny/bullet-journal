@@ -21,7 +21,7 @@ import Screen exposing (Screen)
 import Screen.DailySpread
 import Screen.EditBullet
 import Screen.MonthlySpread
-import Screen.Start
+import Screen.Overview
 import Task exposing (Task)
 import Time
 import Time.Calendar.Days as Calendar
@@ -45,12 +45,12 @@ type alias Model =
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
     { key = key
-    , route = Route.Start
+    , route = Route.Overview
     , today = Calendar.fromGregorian 1970 1 1
     , now = Time.millisToPosix 0
     , timeZone = Time.utc
     , drawerOpen = False
-    , screen = Screen.Overview Screen.Start.defaultModel
+    , screen = Screen.Overview Screen.Overview.defaultModel
     }
 
 
@@ -154,7 +154,7 @@ update msg model =
             ( { model | now = now }, Cmd.none )
 
         BackClicked ->
-            ( model, Browser.Navigation.pushUrl model.key (Route.toString Route.Start) )
+            ( model, Browser.Navigation.pushUrl model.key (Route.toString Route.Overview) )
 
         TodayClicked ->
             let
@@ -196,7 +196,7 @@ update msg model =
 
         StartClicked ->
             ( model
-            , Browser.Navigation.pushUrl model.key (Route.toString Route.Start)
+            , Browser.Navigation.pushUrl model.key (Route.toString Route.Overview)
             )
 
         TableOfContentClicked ->
@@ -254,8 +254,8 @@ drawer model =
                         }
                         [ text label ]
                 )
-                [ { label = "Start"
-                  , activated = model.route == Route.Start
+                [ { label = "Overview"
+                  , activated = model.route == Route.Overview
                   , onClick = StartClicked
                   }
                 , { label = "Table of Content"

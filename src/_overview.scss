@@ -1,0 +1,30 @@
+.overview {
+  flex: 1 1 100%;
+}
+
+
+.overview__input-card {
+  padding: 1rem;
+
+  @include mobile {
+    padding: 0.5rem 1rem;
+  }
+}
+
+
+.mdc-chip-set,
+.overview__daily-bullets,
+.overview__monthly-bullets {
+  margin-top: 1rem;
+}
+
+
+.overview__daily-bullets__title,
+.overview__monthly-bullets__title {
+  margin: 0;
+  padding: 8px 16px 0;
+  line-height: 1;
+  text-align: right;
+  @include mdc-typography(headline6);
+  @include mdc-theme-prop(color, text-hint-on-background);
+}

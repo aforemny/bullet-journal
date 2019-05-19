@@ -10,7 +10,7 @@ import Url.Parser exposing ((</>), int, s)
 
 
 type Route
-    = Start
+    = Overview
     | DailySpread { year : Int, month : Int, dayOfMonth : Int }
     | MonthlySpread { year : Int, month : Int }
     | CollectionSpread (Parse.ObjectId CollectionSpread)
@@ -24,7 +24,7 @@ toString : Route -> String
 toString url =
     String.cons '#' <|
         case url of
-            Start ->
+            Overview ->
                 ""
 
             MonthlySpread { year, month } ->
@@ -72,7 +72,7 @@ fromUrl url =
                 (NotFound (Maybe.withDefault "" url.fragment))
     of
         NotFound "" ->
-            Start
+            Overview
 
         otherUrl ->
             otherUrl
@@ -84,7 +84,7 @@ parseUrl =
             Url.Parser.map ObjectId.fromString Url.Parser.string
     in
     Url.Parser.oneOf
-        [ Url.Parser.map Start (s "")
+        [ Url.Parser.map Overview (s "")
         , Url.Parser.map (EditCollectionSpread Nothing) (s "collection-spread" </> s "new")
         , Url.Parser.map (EditCollectionSpread << Just)
             (s "collection-spread" </> s "edit" </> objectId)

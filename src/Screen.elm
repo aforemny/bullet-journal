@@ -19,7 +19,7 @@ import Screen.DailySpread
 import Screen.EditBullet
 import Screen.EditCollectionSpread
 import Screen.MonthlySpread
-import Screen.Start
+import Screen.Overview
 import Screen.TableOfContent
 import Time
 import Time.Calendar.Days as Calendar
@@ -44,7 +44,7 @@ type alias ToolbarConfig msg =
 
 
 type Screen
-    = Overview Screen.Start.Model
+    = Overview Screen.Overview.Model
     | TableOfContent Screen.TableOfContent.Model
     | DailySpread Screen.DailySpread.Model
     | CollectionSpread Screen.CollectionSpread.Model
@@ -55,7 +55,7 @@ type Screen
 
 
 type Msg msg
-    = OverviewMsg (Screen.Start.Msg msg)
+    = OverviewMsg (Screen.Overview.Msg msg)
     | TableOfContentMsg (Screen.TableOfContent.Msg msg)
     | EditBulletMsg (Screen.EditBullet.Msg msg)
     | EditCollectionSpreadMsg (Screen.EditCollectionSpread.Msg msg)
@@ -72,8 +72,8 @@ init lift config route =
 urlChanged : (Msg msg -> msg) -> Config msg -> Maybe Route -> Route -> ( Screen, Cmd msg )
 urlChanged lift config referringRoute route =
     case route of
-        Route.Start ->
-            Screen.Start.init (lift << OverviewMsg)
+        Route.Overview ->
+            Screen.Overview.init (lift << OverviewMsg)
                 { key = config.key
                 , today = config.today
                 , parse = config.parse
@@ -159,7 +159,7 @@ subscriptions : (Msg msg -> msg) -> Screen -> Sub msg
 subscriptions lift screen =
     case screen of
         Overview overview ->
-            Screen.Start.subscriptions (lift << OverviewMsg) overview
+            Screen.Overview.subscriptions (lift << OverviewMsg) overview
 
         TableOfContent tableOfContent ->
             Screen.TableOfContent.subscriptions (lift << TableOfContentMsg) tableOfContent
@@ -223,7 +223,7 @@ update lift config msg screen =
         OverviewMsg msg_ ->
             case screen of
                 Overview overview ->
-                    Screen.Start.update (lift << OverviewMsg)
+                    Screen.Overview.update (lift << OverviewMsg)
                         { key = config.key
                         , today = config.today
                         , parse = config.parse
@@ -310,7 +310,7 @@ view : (Msg msg -> msg) -> Config msg -> Screen -> List (Html msg)
 view lift config screen =
     case screen of
         Overview overview ->
-            Screen.Start.view (lift << OverviewMsg)
+            Screen.Overview.view (lift << OverviewMsg)
                 { key = config.key
                 , today = config.today
                 , parse = config.parse

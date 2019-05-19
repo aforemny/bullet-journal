@@ -137,7 +137,7 @@ update :
 update lift config msg model =
     let
         referringUrl =
-            Maybe.withDefault Route.Start model.referringUrl
+            Maybe.withDefault Route.Overview model.referringUrl
     in
     case msg of
         DayOfMonthChanged dayOfMonth ->

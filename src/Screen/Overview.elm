@@ -1,4 +1,12 @@
-module Screen.Start exposing (Model, Msg, defaultModel, init, subscriptions, update, view)
+module Screen.Overview exposing
+    ( Model
+    , Msg
+    , defaultModel
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -228,7 +236,7 @@ view lift ({ today } as config) model =
         , additionalSections = []
         }
     , Html.div
-        [ class "start"
+        [ class "overview"
         , class "screen screen--scrollable"
         , config.fixedAdjust
         ]
@@ -247,7 +255,7 @@ inputCard lift config model =
         [ card
             { cardConfig
                 | additionalAttributes =
-                    [ class "start__input-card" ]
+                    [ class "overview__input-card" ]
             }
             { blocks =
                 cardPrimaryAction cardPrimaryActionConfig <|
@@ -339,12 +347,12 @@ dailyBulletsCard lift ({ today } as config) model sortedBullets =
     in
     card
         { cardConfig
-            | additionalAttributes = [ class "start__daily-bullets" ]
+            | additionalAttributes = [ class "overview__daily-bullets" ]
         }
         { blocks =
             [ cardBlock <|
                 Html.div []
-                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
                     , list listConfig
                         (List.map (viewBulletDaily lift config model) bullets)
                     ]
@@ -383,12 +391,12 @@ monthlyBulletsCard lift ({ today } as config) model sortedBullets =
     in
     card
         { cardConfig
-            | additionalAttributes = [ class "start__monthly-bullets" ]
+            | additionalAttributes = [ class "overview__monthly-bullets" ]
         }
         { blocks =
             [ cardBlock <|
                 Html.div []
-                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
                     , list listConfig
                         (List.map (viewBulletMonthly lift config model) bullets)
                     ]
@@ -427,12 +435,12 @@ backlogCard lift ({ today } as config) model sortedBullets =
     card
         { cardConfig
             | additionalAttributes =
-                [ class "start__monthly-bullets" ]
+                [ class "overview__monthly-bullets" ]
         }
         { blocks =
             [ cardBlock <|
                 Html.div []
-                    [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
+                    [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
                     , list listConfig (List.map (viewBullet lift config model) bullets)
                     ]
             ]
