@@ -1,4 +1,12 @@
-module Screen.CollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.CollectionSpread exposing
+    ( Config
+    , Model
+    , Msg
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -12,10 +20,25 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
-import Screen
 import Task exposing (Task)
 import Time
+import Time.Calendar.Days as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
+import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
+
+
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , today : Calendar.Day
+    , parse : Parse.Config
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    , fixedAdjust : Html.Attribute msg
+    }
 
 
 type alias Model =
@@ -44,17 +67,17 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Parse.ObjectId CollectionSpread
-    -> Model
     -> ( Model, Cmd msg )
-init lift viewConfig objectId model =
+init lift config objectId =
     ( defaultModel
     , Cmd.batch
         [ Task.attempt (lift << CollectionSpreadResult)
-            (CollectionSpread.get viewConfig.parse objectId)
-        , Task.attempt (lift << BulletsResult)
-            (Bullet.getOf viewConfig.parse "CollectionSpread" objectId)
+            (CollectionSpread.get config.parse objectId)
+        , Parse.send config.parse
+            (lift << BulletsResult)
+            (Parse.query Bullet.decode (Parse.emptyQuery "Bullet"))
         ]
     )
 
@@ -66,11 +89,11 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
-update lift viewConfig msg model =
+update lift config msg model =
     case msg of
         BulletsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
@@ -86,32 +109,32 @@ update lift viewConfig msg model =
 
         NewBulletClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.EditBullet Nothing))
             )
 
         EditClicked ->
             ( model
             , model.collectionSpread
-                |> Maybe.map (Route.EditCollectionSpread << .objectId)
-                |> Maybe.map (Browser.Navigation.pushUrl viewConfig.key << Route.toString)
+                |> Maybe.map (Route.EditCollectionSpread << Just << .objectId)
+                |> Maybe.map (Browser.Navigation.pushUrl config.key << Route.toString)
                 |> Maybe.withDefault Cmd.none
             )
 
         BulletClicked bulletId ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.EditBullet (Just bulletId)))
             )
 
         BackClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.TableOfContent)
+            , Browser.Navigation.pushUrl config.key (Route.toString Route.TableOfContent)
             )
 
 
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
-view lift viewConfig model =
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
+view lift config model =
     let
         collectionSpread_ =
             model.collectionSpread
@@ -126,7 +149,7 @@ view lift viewConfig model =
                 |> Maybe.map CollectionSpread.title
                 |> Maybe.withDefault "Collection"
     in
-    [ viewConfig.topAppBar
+    [ config.topAppBar
         { title = title
         , menuIcon =
             Just <|

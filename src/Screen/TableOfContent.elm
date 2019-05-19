@@ -1,4 +1,12 @@
-module Screen.TableOfContent exposing (Model, Msg(..), defaultModel, init, newSpreadDialog, subscriptions, update, view)
+module Screen.TableOfContent exposing
+    ( Config
+    , Model
+    , Msg
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -13,17 +21,33 @@ import Material.List exposing (list, listConfig, listItem, listItemConfig, listI
 import Material.TopAppBar as TopAppBar
 import Parse
 import Route
-import Screen
 import Task exposing (Task)
 import Time
+import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
+import Type.Bullet as Bullet exposing (Bullet)
+import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
+
+
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , parse : Parse.Config
+    , today : Calendar.Day
+    , timeZone : Time.Zone
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    , fixedAdjust : Html.Attribute msg
+    }
 
 
 type alias Model =
-    { monthlySpreads : List (Parse.Object MonthlySpread)
-    , dailySpreads : List (Parse.Object DailySpread)
-    , collectionSpreads : List (Parse.Object CollectionSpread)
+    { collectionSpreads : List (Parse.Object CollectionSpread)
+    , bullets : List (Parse.Object Bullet)
     , error : Maybe Parse.Error
     , showNewSpreadDialog : Bool
     }
@@ -31,48 +55,39 @@ type alias Model =
 
 defaultModel : Model
 defaultModel =
-    { monthlySpreads = []
-    , dailySpreads = []
-    , collectionSpreads = []
+    { collectionSpreads = []
+    , bullets = []
     , error = Nothing
     , showNewSpreadDialog = False
     }
 
 
 type Msg msg
-    = MonthlySpreadsResult (Result Parse.Error (List (Parse.Object MonthlySpread)))
-    | DailySpreadsResult (Result Parse.Error (List (Parse.Object DailySpread)))
-    | CollectionSpreadsResult (Result Parse.Error (List (Parse.Object CollectionSpread)))
+    = CollectionSpreadsResult (Result Parse.Error (List (Parse.Object CollectionSpread)))
     | NewSpreadClicked
-    | MonthlySpreadClicked (Parse.Object MonthlySpread)
-    | DailySpreadClicked (Parse.Object DailySpread)
+      -- | MonthlySpreadClicked (Parse.Object MonthlySpread)
+      -- | DailySpreadClicked (Parse.Object DailySpread)
     | CollectionSpreadClicked (Parse.Object CollectionSpread)
     | NewSpreadDialogClosed
-    | NewMonthlySpreadClicked
-    | NewDailySpreadClicked
+      -- | NewMonthlySpreadClicked
+      -- | NewDailySpreadClicked
     | NewCollectionSpreadClicked
-    | NewMonthlySpreadClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
-    | NewDailySpreadClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
+      -- | NewMonthlySpreadClickedResult (Result Parse.Error (Parse.ObjectId MonthlySpread))
+      -- | NewDailySpreadClickedResult (Result Parse.Error (Parse.ObjectId DailySpread))
     | NewCollectionSpreadClickedResult (Result Parse.Error (Parse.ObjectId CollectionSpread))
+    | BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
 
 
-init : (Msg msg -> msg) -> Screen.Config msg -> Model -> ( Model, Cmd msg )
-init lift viewConfig model =
-    ( { defaultModel
-        | monthlySpreads = model.monthlySpreads
-        , dailySpreads = model.dailySpreads
-        , collectionSpreads = model.collectionSpreads
-      }
+init : (Msg msg -> msg) -> Config msg -> ( Model, Cmd msg )
+init lift config =
+    ( defaultModel
     , Cmd.batch
-        [ Parse.send viewConfig.parse
-            (lift << MonthlySpreadsResult)
-            (Parse.query MonthlySpread.decode (Parse.emptyQuery "MonthlySpread"))
-        , Parse.send viewConfig.parse
-            (lift << DailySpreadsResult)
-            (Parse.query DailySpread.decode (Parse.emptyQuery "DailySpread"))
-        , Parse.send viewConfig.parse
+        [ Parse.send config.parse
             (lift << CollectionSpreadsResult)
             (Parse.query CollectionSpread.decode (Parse.emptyQuery "CollectionSpread"))
+        , Parse.send config.parse
+            (lift << BulletsResult)
+            (Parse.query Bullet.decode (Parse.emptyQuery "Bullet"))
         ]
     )
 
@@ -84,24 +99,21 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
-update lift viewConfig msg model =
+update lift config msg model =
     case msg of
-        MonthlySpreadsResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        MonthlySpreadsResult (Ok monthlySpreads) ->
-            ( { model | monthlySpreads = monthlySpreads }, Cmd.none )
-
-        DailySpreadsResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        DailySpreadsResult (Ok dailySpreads) ->
-            ( { model | dailySpreads = dailySpreads }, Cmd.none )
-
+        --        MonthlySpreadsResult (Err err) ->
+        --            ( { model | error = Just err }, Cmd.none )
+        --
+        --        MonthlySpreadsResult (Ok monthlySpreads) ->
+        --            ( { model | monthlySpreads = monthlySpreads }, Cmd.none )
+        --        DailySpreadsResult (Err err) ->
+        --            ( { model | error = Just err }, Cmd.none )
+        --        DailySpreadsResult (Ok dailySpreads) ->
+        --            ( { model | dailySpreads = dailySpreads }, Cmd.none )
         CollectionSpreadsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
 
@@ -114,68 +126,61 @@ update lift viewConfig msg model =
         NewSpreadDialogClosed ->
             ( { model | showNewSpreadDialog = False }, Cmd.none )
 
-        MonthlySpreadClicked monthlySpread ->
-            ( model
-            , Browser.Navigation.pushUrl viewConfig.key
-                (Route.toString (Route.MonthlySpread monthlySpread.objectId))
-            )
-
-        DailySpreadClicked dailySpread ->
-            ( model
-            , Browser.Navigation.pushUrl viewConfig.key
-                (Route.toString (Route.DailySpread dailySpread.objectId))
-            )
-
+        --        MonthlySpreadClicked monthlySpread ->
+        --            ( model
+        --            , Browser.Navigation.pushUrl config.key
+        --                (Route.toString (Route.MonthlySpread monthlySpread.objectId))
+        --            )
+        --        DailySpreadClicked dailySpread ->
+        --            ( model
+        --            , Browser.Navigation.pushUrl config.key
+        --                (Route.toString (Route.DailySpread dailySpread.objectId))
+        --            )
         CollectionSpreadClicked collectionSpread ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.CollectionSpread collectionSpread.objectId))
             )
 
-        NewMonthlySpreadClicked ->
-            let
-                ( year, month, _ ) =
-                    Calendar.toGregorian viewConfig.today
-
-                monthlySpread =
-                    MonthlySpread.empty year month
-            in
-            ( model
-            , Task.attempt (lift << NewMonthlySpreadClickedResult)
-                (MonthlySpread.create viewConfig.parse monthlySpread)
-            )
-
-        NewMonthlySpreadClickedResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        NewMonthlySpreadClickedResult (Ok objectId) ->
-            ( model
-            , Browser.Navigation.pushUrl viewConfig.key
-                (Route.toString (Route.MonthlySpread objectId))
-            )
-
-        NewDailySpreadClicked ->
-            let
-                ( year, month, dayOfMonth ) =
-                    Calendar.toGregorian viewConfig.today
-
-                dailySpread =
-                    DailySpread.empty year month dayOfMonth
-            in
-            ( model
-            , Task.attempt (lift << NewDailySpreadClickedResult)
-                (DailySpread.create viewConfig.parse dailySpread)
-            )
-
-        NewDailySpreadClickedResult (Err err) ->
-            ( { model | error = Just err }, Cmd.none )
-
-        NewDailySpreadClickedResult (Ok objectId) ->
-            ( model
-            , Browser.Navigation.pushUrl viewConfig.key
-                (Route.toString (Route.DailySpread objectId))
-            )
-
+        --        NewMonthlySpreadClicked ->
+        --            let
+        --                ( year, month, _ ) =
+        --                    Calendar.toGregorian config.today
+        --
+        --                monthlySpread =
+        --                    MonthlySpread.empty year month
+        --            in
+        --            ( model
+        --            , Task.attempt (lift << NewMonthlySpreadClickedResult)
+        --                (MonthlySpread.create config.parse monthlySpread)
+        --            )
+        --        NewMonthlySpreadClickedResult (Err err) ->
+        --            ( { model | error = Just err }, Cmd.none )
+        --
+        --        NewMonthlySpreadClickedResult (Ok objectId) ->
+        --            ( model
+        --            , Browser.Navigation.pushUrl config.key
+        --                (Route.toString (Route.MonthlySpread objectId))
+        --            )
+        --        NewDailySpreadClicked ->
+        --            let
+        --                ( year, month, dayOfMonth ) =
+        --                    Calendar.toGregorian config.today
+        --
+        --                dailySpread =
+        --                    DailySpread.empty year month dayOfMonth
+        --            in
+        --            ( model
+        --            , Task.attempt (lift << NewDailySpreadClickedResult)
+        --                (DailySpread.create config.parse dailySpread)
+        --            )
+        --        NewDailySpreadClickedResult (Err err) ->
+        --            ( { model | error = Just err }, Cmd.none )
+        --        NewDailySpreadClickedResult (Ok objectId) ->
+        --            ( model
+        --            , Browser.Navigation.pushUrl config.key
+        --                (Route.toString (Route.DailySpread objectId))
+        --            ))
         NewCollectionSpreadClicked ->
             let
                 collectionSpread =
@@ -183,7 +188,7 @@ update lift viewConfig msg model =
             in
             ( model
             , Task.attempt (lift << NewCollectionSpreadClickedResult)
-                (CollectionSpread.create viewConfig.parse collectionSpread)
+                (CollectionSpread.create config.parse collectionSpread)
             )
 
         NewCollectionSpreadClickedResult (Err err) ->
@@ -191,54 +196,59 @@ update lift viewConfig msg model =
 
         NewCollectionSpreadClickedResult (Ok objectId) ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.CollectionSpread objectId))
             )
 
+        BulletsResult (Err _) ->
+            ( model, Cmd.none )
 
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
-view lift viewConfig model =
+        BulletsResult (Ok bullets) ->
+            ( { model | bullets = bullets }, Cmd.none )
+
+
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
+view lift config model =
     let
-        monthlySpreads =
-            List.map
-                (\monthlySpread_ ->
-                    let
-                        monthlySpread =
-                            MonthlySpread.fromParseObject monthlySpread_
-                    in
-                    ( MonthlySpread.canonicalDate monthlySpread
-                    , listItem
-                        { listItemConfig
-                            | additionalAttributes =
-                                [ Html.Events.onClick
-                                    (lift (MonthlySpreadClicked monthlySpread_))
-                                ]
-                        }
-                        [ text (MonthlySpread.title monthlySpread) ]
-                    )
-                )
-                model.monthlySpreads
-
-        dailySpreads =
-            List.map
-                (\dailySpread_ ->
-                    let
-                        dailySpread =
-                            DailySpread.fromParseObject dailySpread_
-                    in
-                    ( DailySpread.canonicalDate dailySpread
-                    , listItem
-                        { listItemConfig
-                            | additionalAttributes =
-                                [ Html.Events.onClick
-                                    (lift (DailySpreadClicked dailySpread_))
-                                ]
-                        }
-                        [ text (DailySpread.title dailySpread) ]
-                    )
-                )
-                model.dailySpreads
-
+        --        monthlySpreads =
+        --            List.map
+        --                (\monthlySpread_ ->
+        --                    let
+        --                        monthlySpread =
+        --                            MonthlySpread.fromParseObject monthlySpread_
+        --                    in
+        --                    ( MonthlySpread.canonicalDate monthlySpread
+        --                    , listItem
+        --                        { listItemConfig
+        --                            | additionalAttributes =
+        --                                [ Html.Events.onClick
+        --                                    (lift (MonthlySpreadClicked monthlySpread_))
+        --                                ]
+        --                        }
+        --                        [ text (MonthlySpread.title monthlySpread) ]
+        --                    )
+        --                )
+        --                model.monthlySpreads
+        --
+        --        dailySpreads =
+        --            List.map
+        --                (\dailySpread_ ->
+        --                    let
+        --                        dailySpread =
+        --                            DailySpread.fromParseObject dailySpread_
+        --                    in
+        --                    ( DailySpread.canonicalDate dailySpread
+        --                    , listItem
+        --                        { listItemConfig
+        --                            | additionalAttributes =
+        --                                [ Html.Events.onClick
+        --                                    (lift (DailySpreadClicked dailySpread_))
+        --                                ]
+        --                        }
+        --                        [ text (DailySpread.title dailySpread) ]
+        --                    )
+        --                )
+        --                model.dailySpreads
         collectionSpreads =
             List.map
                 (\collectionSpread_ ->
@@ -246,7 +256,7 @@ view lift viewConfig model =
                         collectionSpread =
                             CollectionSpread.fromParseObject collectionSpread_
                     in
-                    ( CollectionSpread.canonicalDate viewConfig.timeZone collectionSpread
+                    ( CollectionSpread.canonicalDate config.timeZone collectionSpread
                     , listItem
                         { listItemConfig
                             | additionalAttributes =
@@ -259,14 +269,14 @@ view lift viewConfig model =
                 )
                 model.collectionSpreads
     in
-    [ viewConfig.topAppBar
+    [ config.topAppBar
         { title = "Table of Content"
         , menuIcon = Nothing
         , additionalSections = []
         }
     , Html.div
         [ class "screen screen--seamless table-of-content"
-        , viewConfig.fixedAdjust
+        , config.fixedAdjust
         ]
         [ Html.div [ class "screen__wrapper" ]
             [ Html.div
@@ -284,9 +294,10 @@ view lift viewConfig model =
                 (List.map Tuple.second <|
                     List.sortBy Tuple.first <|
                         List.concat
-                            [ monthlySpreads
-                            , dailySpreads
-                            , collectionSpreads
+                            [ collectionSpreads
+
+                            -- , monthlySpreads
+                            -- , dailySpreads
                             ]
                 )
             , fab
@@ -298,15 +309,15 @@ view lift viewConfig model =
                 "add"
             ]
         ]
-    , newSpreadDialog lift viewConfig model
+    , newSpreadDialog lift config model
     ]
 
 
-newSpreadDialog : (Msg msg -> msg) -> Screen.Config msg -> Model -> Html msg
-newSpreadDialog lift viewConfig model =
+newSpreadDialog : (Msg msg -> msg) -> Config msg -> Model -> Html msg
+newSpreadDialog lift config model =
     let
         ( year, month, dayOfMonth ) =
-            Calendar.toGregorian viewConfig.today
+            Calendar.toGregorian config.today
 
         monthName =
             case Calendar.defaultTimeLocale of
@@ -337,8 +348,8 @@ newSpreadDialog lift viewConfig model =
                 [ listItem
                     { listItemConfig
                         | additionalAttributes =
-                            [ Html.Events.onClick (lift NewMonthlySpreadClicked)
-                            , Html.Attributes.tabindex 0
+                            [ -- Html.Events.onClick (lift NewMonthlySpreadClicked)
+                              Html.Attributes.tabindex 0
                             ]
                     }
                     [ listItemText []
@@ -349,8 +360,8 @@ newSpreadDialog lift viewConfig model =
                 , listItem
                     { listItemConfig
                         | additionalAttributes =
-                            [ Html.Events.onClick (lift NewDailySpreadClicked)
-                            , Html.Attributes.tabindex 0
+                            [ -- Html.Events.onClick (lift NewDailySpreadClicked)
+                              Html.Attributes.tabindex 0
                             ]
                     }
                     [ listItemText []

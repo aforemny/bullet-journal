@@ -1,4 +1,12 @@
-module Screen.EditCollectionSpread exposing (Model, Msg(..), defaultModel, init, subscriptions, update, view)
+module Screen.EditCollectionSpread exposing
+    ( Config
+    , Model
+    , Msg
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -13,24 +21,40 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route
-import Screen
 import Task exposing (Task)
 import Time
+import Time.Calendar.Days as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
 import Type.CollectionSpread as CollectionSpread exposing (CollectionSpread)
 
 
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , today : Calendar.Day
+    , parse : Parse.Config
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    , fixedAdjust : Html.Attribute msg
+    }
+
+
 type alias Model =
-    { collectionSpread : Maybe (Parse.Object CollectionSpread)
+    { collectionSpreadId : Maybe (Parse.ObjectId CollectionSpread)
+    , collectionSpread : Maybe (Parse.Object CollectionSpread)
     , error : Maybe Parse.Error
     , showConfirmDeleteDialog : Bool
     , title : String
     }
 
 
-defaultModel : Model
-defaultModel =
-    { collectionSpread = Nothing
+defaultModel : Maybe (Parse.ObjectId CollectionSpread) -> Model
+defaultModel collectionSpreadId =
+    { collectionSpreadId = collectionSpreadId
+    , collectionSpread = Nothing
     , error = Nothing
     , showConfirmDeleteDialog = False
     , title = ""
@@ -53,14 +77,18 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> Screen.Config msg
-    -> Parse.ObjectId CollectionSpread
-    -> Model
+    -> Config msg
+    -> Maybe (Parse.ObjectId CollectionSpread)
     -> ( Model, Cmd msg )
-init lift viewConfig objectId model =
-    ( defaultModel
-    , Task.attempt (lift << CollectionSpreadResult)
-        (CollectionSpread.get viewConfig.parse objectId)
+init lift viewConfig maybeCollectionSpreadId =
+    ( defaultModel maybeCollectionSpreadId
+    , maybeCollectionSpreadId
+        |> Maybe.map
+            (\collectionSpreadId ->
+                Task.attempt (lift << CollectionSpreadResult)
+                    (CollectionSpread.get viewConfig.parse collectionSpreadId)
+            )
+        |> Maybe.withDefault Cmd.none
     )
 
 
@@ -71,7 +99,7 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
@@ -158,7 +186,7 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
 view lift viewConfig model =
     let
         collectionSpread_ =

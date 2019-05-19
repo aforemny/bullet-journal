@@ -64,6 +64,7 @@ type Msg
     | UrlRequested Browser.UrlRequest
     | UrlChanged Url
     | StartClicked
+    | TableOfContentClicked
     | DrawerClosed
     | OpenDrawerClicked
     | ScreenMsg (Screen.Msg Msg)
@@ -198,6 +199,11 @@ update msg model =
             , Browser.Navigation.pushUrl model.key (Route.toString Route.Start)
             )
 
+        TableOfContentClicked ->
+            ( model
+            , Browser.Navigation.pushUrl model.key (Route.toString Route.TableOfContent)
+            )
+
         DrawerClosed ->
             ( { model | drawerOpen = False }, Cmd.none )
 
@@ -251,6 +257,10 @@ drawer model =
                 [ { label = "Start"
                   , activated = model.route == Route.Start
                   , onClick = StartClicked
+                  }
+                , { label = "Table of Content"
+                  , activated = model.route == Route.TableOfContent
+                  , onClick = TableOfContentClicked
                   }
                 , { label = "Today"
                   , activated =

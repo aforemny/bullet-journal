@@ -14,10 +14,13 @@ import Browser.Navigation
 import Html exposing (Html, text)
 import Parse
 import Route exposing (Route)
+import Screen.CollectionSpread
 import Screen.DailySpread
 import Screen.EditBullet
+import Screen.EditCollectionSpread
 import Screen.MonthlySpread
 import Screen.Start
+import Screen.TableOfContent
 import Time
 import Time.Calendar.Days as Calendar
 
@@ -42,16 +45,22 @@ type alias ToolbarConfig msg =
 
 type Screen
     = Overview Screen.Start.Model
+    | TableOfContent Screen.TableOfContent.Model
     | DailySpread Screen.DailySpread.Model
+    | CollectionSpread Screen.CollectionSpread.Model
     | MonthlySpread Screen.MonthlySpread.Model
     | EditBullet Screen.EditBullet.Model
+    | EditCollectionSpread Screen.EditCollectionSpread.Model
     | NotFound String
 
 
 type Msg msg
-    = EditBulletMsg (Screen.EditBullet.Msg msg)
+    = OverviewMsg (Screen.Start.Msg msg)
+    | TableOfContentMsg (Screen.TableOfContent.Msg msg)
+    | EditBulletMsg (Screen.EditBullet.Msg msg)
+    | EditCollectionSpreadMsg (Screen.EditCollectionSpread.Msg msg)
+    | CollectionSpreadMsg (Screen.CollectionSpread.Msg msg)
     | DailySpreadMsg (Screen.DailySpread.Msg msg)
-    | OverviewMsg (Screen.Start.Msg msg)
     | MonthlySpreadMsg (Screen.MonthlySpread.Msg msg)
 
 
@@ -72,6 +81,17 @@ urlChanged lift config referringRoute route =
                 , fixedAdjust = config.fixedAdjust
                 }
                 |> Tuple.mapFirst Overview
+
+        Route.TableOfContent ->
+            Screen.TableOfContent.init (lift << TableOfContentMsg)
+                { key = config.key
+                , today = config.today
+                , timeZone = config.timeZone
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                |> Tuple.mapFirst TableOfContent
 
         Route.DailySpread { year, month, dayOfMonth } ->
             Screen.DailySpread.init (lift << DailySpreadMsg)
@@ -98,6 +118,17 @@ urlChanged lift config referringRoute route =
                 }
                 |> Tuple.mapFirst MonthlySpread
 
+        Route.CollectionSpread collectionSpreadId ->
+            Screen.CollectionSpread.init (lift << CollectionSpreadMsg)
+                { key = config.key
+                , today = config.today
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                collectionSpreadId
+                |> Tuple.mapFirst CollectionSpread
+
         Route.EditBullet maybeBulletId ->
             Screen.EditBullet.init (lift << EditBulletMsg)
                 { key = config.key
@@ -109,6 +140,17 @@ urlChanged lift config referringRoute route =
                 maybeBulletId
                 |> Tuple.mapFirst EditBullet
 
+        Route.EditCollectionSpread maybeCollectionSpreadId ->
+            Screen.EditCollectionSpread.init (lift << EditCollectionSpreadMsg)
+                { key = config.key
+                , today = config.today
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                maybeCollectionSpreadId
+                |> Tuple.mapFirst EditCollectionSpread
+
         Route.NotFound hash ->
             ( NotFound hash, Cmd.none )
 
@@ -119,14 +161,25 @@ subscriptions lift screen =
         Overview overview ->
             Screen.Start.subscriptions (lift << OverviewMsg) overview
 
+        TableOfContent tableOfContent ->
+            Screen.TableOfContent.subscriptions (lift << TableOfContentMsg) tableOfContent
+
         DailySpread dailySpread ->
             Screen.DailySpread.subscriptions (lift << DailySpreadMsg) dailySpread
 
         MonthlySpread monthlySpread ->
             Screen.MonthlySpread.subscriptions (lift << MonthlySpreadMsg) monthlySpread
 
+        CollectionSpread collectionSpread ->
+            Screen.CollectionSpread.subscriptions (lift << CollectionSpreadMsg)
+                collectionSpread
+
         EditBullet editBullet ->
             Screen.EditBullet.subscriptions (lift << EditBulletMsg) editBullet
+
+        EditCollectionSpread editCollectionSpread ->
+            Screen.EditCollectionSpread.subscriptions (lift << EditCollectionSpreadMsg)
+                editCollectionSpread
 
         NotFound _ ->
             Sub.none
@@ -200,6 +253,58 @@ update lift config msg screen =
                 _ ->
                     ( screen, Cmd.none )
 
+        TableOfContentMsg msg_ ->
+            case screen of
+                TableOfContent tableOfContent ->
+                    Screen.TableOfContent.update (lift << TableOfContentMsg)
+                        { key = config.key
+                        , today = config.today
+                        , timeZone = config.timeZone
+                        , parse = config.parse
+                        , topAppBar = config.topAppBar
+                        , fixedAdjust = config.fixedAdjust
+                        }
+                        msg_
+                        tableOfContent
+                        |> Tuple.mapFirst TableOfContent
+
+                _ ->
+                    ( screen, Cmd.none )
+
+        CollectionSpreadMsg msg_ ->
+            case screen of
+                CollectionSpread collectionSpread ->
+                    Screen.CollectionSpread.update (lift << CollectionSpreadMsg)
+                        { key = config.key
+                        , today = config.today
+                        , parse = config.parse
+                        , topAppBar = config.topAppBar
+                        , fixedAdjust = config.fixedAdjust
+                        }
+                        msg_
+                        collectionSpread
+                        |> Tuple.mapFirst CollectionSpread
+
+                _ ->
+                    ( screen, Cmd.none )
+
+        EditCollectionSpreadMsg msg_ ->
+            case screen of
+                EditCollectionSpread editCollectionSpread ->
+                    Screen.EditCollectionSpread.update (lift << EditCollectionSpreadMsg)
+                        { key = config.key
+                        , today = config.today
+                        , parse = config.parse
+                        , topAppBar = config.topAppBar
+                        , fixedAdjust = config.fixedAdjust
+                        }
+                        msg_
+                        editCollectionSpread
+                        |> Tuple.mapFirst EditCollectionSpread
+
+                _ ->
+                    ( screen, Cmd.none )
+
 
 view : (Msg msg -> msg) -> Config msg -> Screen -> List (Html msg)
 view lift config screen =
@@ -213,6 +318,17 @@ view lift config screen =
                 , fixedAdjust = config.fixedAdjust
                 }
                 overview
+
+        TableOfContent tableOfContent ->
+            Screen.TableOfContent.view (lift << TableOfContentMsg)
+                { key = config.key
+                , today = config.today
+                , timeZone = config.timeZone
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                tableOfContent
 
         MonthlySpread monthlySpread ->
             Screen.MonthlySpread.view (lift << MonthlySpreadMsg)
@@ -232,6 +348,16 @@ view lift config screen =
                 }
                 monthlySpread
 
+        CollectionSpread collectionSpread ->
+            Screen.CollectionSpread.view (lift << CollectionSpreadMsg)
+                { key = config.key
+                , today = config.today
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                collectionSpread
+
         EditBullet editBullet ->
             Screen.EditBullet.view (lift << EditBulletMsg)
                 { key = config.key
@@ -240,6 +366,16 @@ view lift config screen =
                 , fixedAdjust = config.fixedAdjust
                 }
                 editBullet
+
+        EditCollectionSpread editCollectionSpread ->
+            Screen.EditCollectionSpread.view (lift << EditCollectionSpreadMsg)
+                { key = config.key
+                , today = config.today
+                , parse = config.parse
+                , topAppBar = config.topAppBar
+                , fixedAdjust = config.fixedAdjust
+                }
+                editCollectionSpread
 
         NotFound notFound ->
             [ text <| "notFound: " ++ notFound ]
