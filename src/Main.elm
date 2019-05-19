@@ -33,7 +33,7 @@ import Url exposing (Url)
 
 type alias Model =
     { key : Browser.Navigation.Key
-    , url : Route
+    , route : Route
     , today : Calendar.Day
     , now : Time.Posix
     , timeZone : Time.Zone
@@ -45,7 +45,7 @@ type alias Model =
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
     { key = key
-    , url = Route.Start
+    , route = Route.Start
     , today = Calendar.fromGregorian 1970 1 1
     , now = Time.millisToPosix 0
     , timeZone = Time.utc
@@ -103,7 +103,7 @@ init flags url key =
                             , now =
                                 Ports.readDateUnsafe flags.now
                                     |> Maybe.withDefault model_.now
-                            , url = route
+                            , route = route
                         }
                    )
             , Cmd.none
@@ -116,8 +116,8 @@ init flags url key =
 
 urlChanged : Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 urlChanged route ( model, cmd ) =
-    Screen.urlChanged ScreenMsg (makeScreenConfig model) (Just model.url) route
-        |> Tuple.mapFirst (\screen -> { model | url = route, screen = screen })
+    Screen.urlChanged ScreenMsg (makeScreenConfig model) (Just model.route) route
+        |> Tuple.mapFirst (\screen -> { model | route = route, screen = screen })
         |> Tuple.mapSecond (\screenCmd -> Cmd.batch [ cmd, screenCmd ])
 
 
@@ -249,19 +249,19 @@ drawer model =
                         [ text label ]
                 )
                 [ { label = "Start"
-                  , activated = model.url == Route.Start
+                  , activated = model.route == Route.Start
                   , onClick = StartClicked
                   }
                 , { label = "Today"
                   , activated =
-                        model.url
+                        model.route
                             == Route.DailySpread
                                 { year = year, month = month, dayOfMonth = dayOfMonth }
                   , onClick = TodayClicked
                   }
                 , { label = "This month"
                   , activated =
-                        model.url == Route.MonthlySpread { year = year, month = month }
+                        model.route == Route.MonthlySpread { year = year, month = month }
                   , onClick = ThisMonthClicked
                   }
                 ]
