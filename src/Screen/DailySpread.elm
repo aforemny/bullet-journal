@@ -22,7 +22,6 @@ import Material.List exposing (list, listConfig)
 import Material.TopAppBar as TopAppBar
 import Parse
 import Route exposing (Route)
-import Screen
 import Task
 import Time
 import Time.Calendar.Gregorian as Calendar
@@ -30,6 +29,19 @@ import Time.Calendar.MonthDay as Calendar
 import Time.Calendar.OrdinalDate as Calendar
 import Time.Calendar.Week as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
+
+
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , parse : Parse.Config
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    , fixedAdjust : Html.Attribute msg
+    }
 
 
 type alias Model =
@@ -50,24 +62,22 @@ defaultModel date =
 type Msg msg
     = BulletsResult (Result Parse.Error (List (Parse.Object Bullet)))
     | NewBulletClicked
-    | BackClicked
     | BulletClicked (Parse.ObjectId Bullet)
 
 
 init :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     ->
         { year : Int
         , month : Int
         , dayOfMonth : Int
         }
-    -> Model
     -> ( Model, Cmd msg )
-init lift viewConfig ({ year, month, dayOfMonth } as date) model =
+init lift config ({ year, month, dayOfMonth } as date) =
     ( defaultModel date
     , Cmd.batch
-        [ Parse.send viewConfig.parse
+        [ Parse.send config.parse
             (lift << BulletsResult)
             (Parse.query Bullet.decode (Parse.emptyQuery "Bullet"))
         ]
@@ -81,11 +91,11 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
-update lift viewConfig msg model =
+update lift config msg model =
     case msg of
         BulletsResult (Err err) ->
             ( { model | error = Just err }, Cmd.none )
@@ -95,24 +105,19 @@ update lift viewConfig msg model =
 
         NewBulletClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.EditBullet Nothing))
             )
 
         BulletClicked bulletId ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.EditBullet (Just bulletId)))
             )
 
-        BackClicked ->
-            ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString Route.Start)
-            )
 
-
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
-view lift viewConfig model =
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
+view lift config model =
     let
         title =
             String.fromInt model.date.year
@@ -156,22 +161,15 @@ view lift viewConfig model =
                         ( stateSort, createdAtSort )
                     )
     in
-    [ viewConfig.topAppBar
+    [ config.topAppBar
         { title = title
-        , menuIcon =
-            Just <|
-                iconButton
-                    { iconButtonConfig
-                        | onClick = Just (lift BackClicked)
-                        , additionalAttributes = [ TopAppBar.navigationIcon ]
-                    }
-                    "arrow_back"
+        , menuIcon = Nothing
         , additionalSections = []
         }
     , Html.div
         [ class "daily-spread"
         , class "screen screen--scrollable"
-        , viewConfig.fixedAdjust
+        , config.fixedAdjust
         ]
         [ Html.div [ class "screen__wrapper" ]
             [ card

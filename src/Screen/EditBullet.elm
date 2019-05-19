@@ -1,4 +1,12 @@
-module Screen.EditBullet exposing (Model, Msg(..), Tipe(..), bulletDelete, bulletForm, defaultModel, deleteBullet, init, subscriptions, update, view)
+module Screen.EditBullet exposing
+    ( Model
+    , Msg(..)
+    , defaultModel
+    , init
+    , subscriptions
+    , update
+    , view
+    )
 
 import Browser.Navigation
 import Html exposing (Html, text)
@@ -15,7 +23,6 @@ import Parse
 import Parse.Private.ObjectId as ObjectId
 import Parse.Private.Pointer as Pointer
 import Route exposing (Route)
-import Screen
 import Task
 import Time
 import Time.Calendar.Gregorian as Calendar
@@ -27,7 +34,7 @@ import Type.Bullet as Bullet exposing (Bullet)
 
 
 type alias Model =
-    { referringUrl : Route
+    { referringUrl : Maybe Route
     , bulletId : Maybe (Parse.ObjectId Bullet)
     , bullet : Maybe (Parse.Object Bullet)
     , tipe : Tipe
@@ -41,6 +48,19 @@ type alias Model =
     }
 
 
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , parse : Parse.Config
+    , fixedAdjust : Html.Attribute msg
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    }
+
+
 type Tipe
     = Task
     | Event
@@ -48,7 +68,7 @@ type Tipe
 
 
 defaultModel :
-    Route
+    Maybe Route
     -> Maybe (Parse.ObjectId Bullet)
     -> Model
 defaultModel referringUrl bulletId =
@@ -88,16 +108,15 @@ type Msg msg
 
 init :
     (Msg msg -> msg)
-    -> Screen.Config msg
-    -> Route
+    -> Config msg
+    -> Maybe Route
     -> Maybe (Parse.ObjectId Bullet)
-    -> Maybe Model
     -> ( Model, Cmd msg )
-init lift viewConfig referringUrl bulletId model =
+init lift config referringUrl bulletId =
     ( defaultModel referringUrl bulletId
     , Cmd.batch
         [ bulletId
-            |> Maybe.map (Bullet.get viewConfig.parse)
+            |> Maybe.map (Bullet.get config.parse)
             |> Maybe.map (Task.attempt (lift << BulletResult))
             |> Maybe.withDefault Cmd.none
         ]
@@ -111,11 +130,15 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
-update lift viewConfig msg model =
+update lift config msg model =
+    let
+        referringUrl =
+            Maybe.withDefault Route.Start model.referringUrl
+    in
     case msg of
         DayOfMonthChanged dayOfMonth ->
             ( { model | dayOfMonth = dayOfMonth }, Cmd.none )
@@ -188,11 +211,11 @@ update lift viewConfig msg model =
                             |> Maybe.map
                                 (\bulletId ->
                                     Task.attempt (lift << UpdateResult)
-                                        (Bullet.update viewConfig.parse bulletId bullet)
+                                        (Bullet.update config.parse bulletId bullet)
                                 )
                             |> Maybe.withDefault
                                 (Task.attempt (lift << CreateResult)
-                                    (Bullet.create viewConfig.parse bullet)
+                                    (Bullet.create config.parse bullet)
                                 )
                     )
                 |> Maybe.withDefault Cmd.none
@@ -203,7 +226,7 @@ update lift viewConfig msg model =
 
         UpdateResult (Ok _) ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            , Browser.Navigation.pushUrl config.key (Route.toString referringUrl)
             )
 
         CreateResult (Err err) ->
@@ -211,17 +234,17 @@ update lift viewConfig msg model =
 
         CreateResult (Ok _) ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            , Browser.Navigation.pushUrl config.key (Route.toString referringUrl)
             )
 
         CancelClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            , Browser.Navigation.pushUrl config.key (Route.toString referringUrl)
             )
 
         BackClicked ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            , Browser.Navigation.pushUrl config.key (Route.toString referringUrl)
             )
 
         DeleteClicked ->
@@ -236,7 +259,7 @@ update lift viewConfig msg model =
         ConfirmDeleteClicked ->
             ( { model | showConfirmDeleteDialog = False }
             , model.bulletId
-                |> Maybe.map (Bullet.delete viewConfig.parse)
+                |> Maybe.map (Bullet.delete config.parse)
                 |> Maybe.map (Task.attempt (lift << DeleteResult))
                 |> Maybe.withDefault Cmd.none
             )
@@ -246,7 +269,7 @@ update lift viewConfig msg model =
 
         DeleteResult (Ok _) ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key (Route.toString model.referringUrl)
+            , Browser.Navigation.pushUrl config.key (Route.toString referringUrl)
             )
 
         BulletResult (Err err) ->
@@ -293,9 +316,9 @@ update lift viewConfig msg model =
             )
 
 
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
-view lift viewConfig model =
-    [ viewConfig.topAppBar
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
+view lift config model =
+    [ config.topAppBar
         { title =
             model.bulletId
                 |> Maybe.map ((++) "Edit " << ObjectId.toString)
@@ -313,7 +336,7 @@ view lift viewConfig model =
         }
     , Html.div
         [ class "screen edit-bullet"
-        , viewConfig.fixedAdjust
+        , config.fixedAdjust
         , case model.tipe of
             Task ->
                 class "edit-bullet--tipe-task"

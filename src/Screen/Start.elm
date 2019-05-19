@@ -17,9 +17,9 @@ import Material.TopAppBar as TopAppBar
 import Parse
 import Parse.Private.ObjectId as ObjectId
 import Route exposing (Route)
-import Screen
 import Task exposing (Task)
 import Time
+import Time.Calendar.Days as Calendar
 import Time.Calendar.Gregorian as Calendar
 import Time.Format.Locale as Calendar
 import Type.Bullet as Bullet exposing (Bullet)
@@ -49,8 +49,22 @@ type Msg msg
     | BulletMarkedDone (Result Parse.Error (Parse.ObjectId Bullet))
 
 
-init : (Msg msg -> msg) -> Screen.Config msg -> Model -> ( Model, Cmd msg )
-init lift { today, parse } model =
+type alias Config msg =
+    { key : Browser.Navigation.Key
+    , today : Calendar.Day
+    , parse : Parse.Config
+    , topAppBar :
+        { title : String
+        , menuIcon : Maybe (Html msg)
+        , additionalSections : List (Html msg)
+        }
+        -> Html msg
+    , fixedAdjust : Html.Attribute msg
+    }
+
+
+init : (Msg msg -> msg) -> Config msg -> ( Model, Cmd msg )
+init lift { today, parse } =
     let
         ( year, month, dayOfMonth ) =
             Calendar.toGregorian today
@@ -72,11 +86,11 @@ subscriptions lift model =
 
 update :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Msg msg
     -> Model
     -> ( Model, Cmd msg )
-update lift ({ today, parse } as viewConfig) msg model =
+update lift ({ today, parse, key } as config) msg model =
     case Debug.log "Msg" msg of
         BulletCreated (Err err) ->
             -- TODO:
@@ -135,7 +149,7 @@ update lift ({ today, parse } as viewConfig) msg model =
 
         BulletClicked bullet ->
             ( model
-            , Browser.Navigation.pushUrl viewConfig.key
+            , Browser.Navigation.pushUrl config.key
                 (Route.toString (Route.EditBullet (Just bullet.objectId)))
             )
 
@@ -172,8 +186,8 @@ update lift ({ today, parse } as viewConfig) msg model =
             ( model, Cmd.none )
 
 
-view : (Msg msg -> msg) -> Screen.Config msg -> Model -> List (Html msg)
-view lift ({ today } as viewConfig) model =
+view : (Msg msg -> msg) -> Config msg -> Model -> List (Html msg)
+view lift ({ today } as config) model =
     let
         sortedBullets =
             model.bullets
@@ -208,7 +222,7 @@ view lift ({ today } as viewConfig) model =
                         ( stateSort, createdAtSort )
                     )
     in
-    [ viewConfig.topAppBar
+    [ config.topAppBar
         { title = "Overview"
         , menuIcon = Nothing
         , additionalSections = []
@@ -216,19 +230,19 @@ view lift ({ today } as viewConfig) model =
     , Html.div
         [ class "start"
         , class "screen screen--scrollable"
-        , viewConfig.fixedAdjust
+        , config.fixedAdjust
         ]
         [ Html.div [ class "screen__wrapper" ]
-            [ inputCard lift viewConfig model
-            , dailyBulletsCard lift viewConfig model sortedBullets
-            , monthlyBulletsCard lift viewConfig model sortedBullets
-            , backlogCard lift viewConfig model sortedBullets
+            [ inputCard lift config model
+            , dailyBulletsCard lift config model sortedBullets
+            , monthlyBulletsCard lift config model sortedBullets
+            , backlogCard lift config model sortedBullets
             ]
         ]
     ]
 
 
-inputCard lift viewConfig model =
+inputCard lift config model =
     Html.div []
         [ card
             { cardConfig
@@ -291,7 +305,7 @@ inputCard lift viewConfig model =
         ]
 
 
-dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
+dailyBulletsCard lift ({ today } as config) model sortedBullets =
     let
         ( yearToday, monthToday, dayOfMonthToday ) =
             Calendar.toGregorian today
@@ -332,14 +346,14 @@ dailyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
                 Html.div []
                     [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
                     , list listConfig
-                        (List.map (viewBulletDaily lift viewConfig model) bullets)
+                        (List.map (viewBulletDaily lift config model) bullets)
                     ]
             ]
         , actions = Nothing
         }
 
 
-monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
+monthlyBulletsCard lift ({ today } as config) model sortedBullets =
     let
         bullets =
             sortedBullets
@@ -376,14 +390,14 @@ monthlyBulletsCard lift ({ today } as viewConfig) model sortedBullets =
                 Html.div []
                     [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
                     , list listConfig
-                        (List.map (viewBulletMonthly lift viewConfig model) bullets)
+                        (List.map (viewBulletMonthly lift config model) bullets)
                     ]
             ]
         , actions = Nothing
         }
 
 
-backlogCard lift ({ today } as viewConfig) model sortedBullets =
+backlogCard lift ({ today } as config) model sortedBullets =
     let
         bullets =
             sortedBullets
@@ -419,7 +433,7 @@ backlogCard lift ({ today } as viewConfig) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "start__daily-bullets__title" ] [ text title ]
-                    , list listConfig (List.map (viewBullet lift viewConfig model) bullets)
+                    , list listConfig (List.map (viewBullet lift config model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -450,11 +464,11 @@ bulletClass bullet =
 
 viewBullet :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Model
     -> Parse.Object Bullet
     -> Html msg
-viewBullet lift viewConfig model bullet =
+viewBullet lift config model bullet =
     let
         date =
             case bullet.date of
@@ -487,11 +501,11 @@ viewBullet lift viewConfig model bullet =
 
 viewBulletDaily :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Model
     -> Parse.Object Bullet
     -> Html msg
-viewBulletDaily lift viewConfig model bullet =
+viewBulletDaily lift config model bullet =
     listItem
         { listItemConfig
             | additionalAttributes =
@@ -506,11 +520,11 @@ viewBulletDaily lift viewConfig model bullet =
 
 viewBulletMonthly :
     (Msg msg -> msg)
-    -> Screen.Config msg
+    -> Config msg
     -> Model
     -> Parse.Object Bullet
     -> Html msg
-viewBulletMonthly lift viewConfig model bullet =
+viewBulletMonthly lift config model bullet =
     let
         date =
             case bullet.date of

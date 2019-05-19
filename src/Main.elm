@@ -17,7 +17,7 @@ import Parse.Private.ObjectId as ObjectId
 import ParseConfig exposing (parseConfig)
 import Ports
 import Route exposing (Route)
-import Screen
+import Screen exposing (Screen)
 import Screen.DailySpread
 import Screen.EditBullet
 import Screen.MonthlySpread
@@ -34,31 +34,23 @@ import Url exposing (Url)
 type alias Model =
     { key : Browser.Navigation.Key
     , url : Route
-    , editBullet : Maybe Screen.EditBullet.Model
-    , start : Screen.Start.Model
-    , dailySpread : Screen.DailySpread.Model
-    , monthlySpread : Screen.MonthlySpread.Model
     , today : Calendar.Day
     , now : Time.Posix
-    , error : Maybe Parse.Error
     , timeZone : Time.Zone
     , drawerOpen : Bool
+    , screen : Screen
     }
 
 
 defaultModel : Browser.Navigation.Key -> Model
 defaultModel key =
-    { url = Route.Start
-    , start = Screen.Start.defaultModel
-    , editBullet = Nothing
-    , dailySpread = Screen.DailySpread.defaultModel { year = 1970, month = 1, dayOfMonth = 1 }
-    , monthlySpread = Screen.MonthlySpread.defaultModel { year = 1970, month = 1 }
+    { key = key
+    , url = Route.Start
     , today = Calendar.fromGregorian 1970 1 1
     , now = Time.millisToPosix 0
-    , error = Nothing
     , timeZone = Time.utc
-    , key = key
     , drawerOpen = False
+    , screen = Screen.Overview Screen.Start.defaultModel
     }
 
 
@@ -67,10 +59,6 @@ type Msg
     | TodayChanged (Maybe Calendar.Day)
     | NowChanged (Maybe Time.Posix)
     | BackClicked
-    | EditBulletMsg (Screen.EditBullet.Msg Msg)
-    | DailySpreadMsg (Screen.DailySpread.Msg Msg)
-    | StartMsg (Screen.Start.Msg Msg)
-    | MonthlySpreadMsg (Screen.MonthlySpread.Msg Msg)
     | TodayClicked
     | ThisMonthClicked
     | UrlRequested Browser.UrlRequest
@@ -78,6 +66,7 @@ type Msg
     | StartClicked
     | DrawerClosed
     | OpenDrawerClicked
+    | ScreenMsg (Screen.Msg Msg)
 
 
 type alias Flags =
@@ -99,16 +88,13 @@ main =
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init flags url_ key =
+init flags url key =
     let
-        url =
-            Route.fromUrl url_
+        route =
+            Route.fromUrl url
 
-        screenConfig =
-            makeScreenConfig model
-
-        model =
-            defaultModel key
+        ( model, cmd ) =
+            ( defaultModel key
                 |> (\model_ ->
                         { model_
                             | today =
@@ -117,12 +103,22 @@ init flags url_ key =
                             , now =
                                 Ports.readDateUnsafe flags.now
                                     |> Maybe.withDefault model_.now
-                            , url = url
+                            , url = route
                         }
                    )
+            , Cmd.none
+            )
     in
-    ( model, Cmd.none )
-        |> andThenInitScreen screenConfig url
+    Screen.init ScreenMsg (makeScreenConfig model) route
+        |> Tuple.mapFirst (\screen -> { model | screen = screen })
+        |> Tuple.mapSecond (\screenCmd -> Cmd.batch [ cmd, screenCmd ])
+
+
+urlChanged : Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+urlChanged route ( model, cmd ) =
+    Screen.urlChanged ScreenMsg (makeScreenConfig model) (Just model.url) route
+        |> Tuple.mapFirst (\screen -> { model | url = route, screen = screen })
+        |> Tuple.mapSecond (\screenCmd -> Cmd.batch [ cmd, screenCmd ])
 
 
 subscriptions : Model -> Sub Msg
@@ -130,59 +126,8 @@ subscriptions model =
     Sub.batch
         [ Ports.today TodayChanged
         , Ports.now NowChanged
-        , Screen.DailySpread.subscriptions DailySpreadMsg model.dailySpread
-        , Screen.MonthlySpread.subscriptions MonthlySpreadMsg model.monthlySpread
-        , Screen.Start.subscriptions StartMsg model.start
+        , Screen.subscriptions ScreenMsg model.screen
         ]
-
-
-andThenInitScreen : Screen.Config Msg -> Route -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
-andThenInitScreen screenConfig url ( model, cmd ) =
-    (case url of
-        Route.Start ->
-            Screen.Start.init StartMsg screenConfig model.start
-                |> Tuple.mapFirst (\start -> { model | start = start })
-
-        Route.MonthlySpread date ->
-            Screen.MonthlySpread.init MonthlySpreadMsg
-                screenConfig
-                date
-                model.monthlySpread
-                |> Tuple.mapFirst
-                    (\monthlySpread ->
-                        { model | monthlySpread = monthlySpread }
-                    )
-
-        Route.DailySpread date ->
-            Screen.DailySpread.init
-                DailySpreadMsg
-                screenConfig
-                date
-                model.dailySpread
-                |> Tuple.mapFirst
-                    (\dailySpread ->
-                        { model | dailySpread = dailySpread }
-                    )
-
-        Route.EditBullet bulletId ->
-            Screen.EditBullet.init EditBulletMsg
-                screenConfig
-                -- TODO:
-                Route.Start
-                bulletId
-                model.editBullet
-                |> Tuple.mapFirst
-                    (\editBullet ->
-                        { model | editBullet = Just editBullet }
-                    )
-
-        _ ->
-            ( model, Cmd.none )
-    )
-        |> Tuple.mapSecond
-            (\otherCmd ->
-                Cmd.batch [ cmd, otherCmd ]
-            )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -194,33 +139,6 @@ update msg model =
     case msg of
         NoOp ->
             ( model, Cmd.none )
-
-        MonthlySpreadMsg msg_ ->
-            model.monthlySpread
-                |> Screen.MonthlySpread.update MonthlySpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\monthlySpread -> { model | monthlySpread = monthlySpread })
-
-        DailySpreadMsg msg_ ->
-            model.dailySpread
-                |> Screen.DailySpread.update DailySpreadMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\dailySpread -> { model | dailySpread = dailySpread })
-
-        StartMsg msg_ ->
-            model.start
-                |> Screen.Start.update StartMsg screenConfig msg_
-                |> Tuple.mapFirst
-                    (\start -> { model | start = start })
-
-        EditBulletMsg msg_ ->
-            model.editBullet
-                |> Maybe.map (Screen.EditBullet.update EditBulletMsg screenConfig msg_)
-                |> Maybe.map
-                    (Tuple.mapFirst
-                        (\editBullet -> { model | editBullet = Just editBullet })
-                    )
-                |> Maybe.withDefault ( model, Cmd.none )
 
         TodayChanged Nothing ->
             ( model, Cmd.none )
@@ -273,8 +191,7 @@ update msg model =
             ( model, Browser.Navigation.load url )
 
         UrlChanged url ->
-            ( { model | url = Route.fromUrl url }, Cmd.none )
-                |> andThenInitScreen screenConfig (Route.fromUrl url)
+            urlChanged (Route.fromUrl url) ( model, Cmd.none )
 
         StartClicked ->
             ( model
@@ -287,37 +204,9 @@ update msg model =
         OpenDrawerClicked ->
             ( { model | drawerOpen = True }, Cmd.none )
 
-
-makeScreenConfig : Model -> Screen.Config Msg
-makeScreenConfig model =
-    { topAppBar =
-        \config ->
-            topAppBar { topAppBarConfig | fixed = True }
-                [ TopAppBar.row []
-                    ([ TopAppBar.section [ TopAppBar.alignStart ]
-                        [ config.menuIcon
-                            |> Maybe.withDefault
-                                (iconButton
-                                    { iconButtonConfig
-                                        | onClick = Just OpenDrawerClicked
-                                        , additionalAttributes =
-                                            [ TopAppBar.navigationIcon ]
-                                    }
-                                    "menu"
-                                )
-                        , Html.h1 [ TopAppBar.title ] [ text config.title ]
-                        ]
-                     ]
-                        ++ config.additionalSections
-                    )
-                ]
-    , fixedAdjust = TopAppBar.fixedAdjust
-    , today = model.today
-    , now = model.now
-    , parse = parseConfig
-    , key = model.key
-    , timeZone = model.timeZone
-    }
+        ScreenMsg msg_ ->
+            Screen.update ScreenMsg screenConfig msg_ model.screen
+                |> Tuple.mapFirst (\screen -> { model | screen = screen })
 
 
 view model =
@@ -335,26 +224,15 @@ view model =
 
 content screenConfig model =
     [ Html.div [ class "main__content" ]
-        (case model.url of
-            Route.Start ->
-                viewStart screenConfig model
-
-            Route.MonthlySpread objectId ->
-                viewMonthlySpread screenConfig model
-
-            Route.DailySpread objectId ->
-                viewDailySpread screenConfig model
-
-            Route.NotFound urlString ->
-                viewNotFound screenConfig urlString model
-
-            Route.EditBullet _ ->
-                viewEditBullet screenConfig model
-        )
+        (Screen.view ScreenMsg screenConfig model.screen)
     ]
 
 
 drawer model =
+    let
+        ( year, month, dayOfMonth ) =
+            Calendar.toGregorian model.today
+    in
     [ modalDrawer
         { drawerConfig
             | open = model.drawerOpen
@@ -375,11 +253,15 @@ drawer model =
                   , onClick = StartClicked
                   }
                 , { label = "Today"
-                  , activated = False
+                  , activated =
+                        model.url
+                            == Route.DailySpread
+                                { year = year, month = month, dayOfMonth = dayOfMonth }
                   , onClick = TodayClicked
                   }
                 , { label = "This month"
-                  , activated = False
+                  , activated =
+                        model.url == Route.MonthlySpread { year = year, month = month }
                   , onClick = ThisMonthClicked
                   }
                 ]
@@ -389,30 +271,35 @@ drawer model =
     ]
 
 
-viewMonthlySpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewMonthlySpread screenConfig model =
-    Screen.MonthlySpread.view MonthlySpreadMsg screenConfig model.monthlySpread
+topAppBar_ config =
+    topAppBar { topAppBarConfig | fixed = True }
+        [ TopAppBar.row []
+            ([ TopAppBar.section [ TopAppBar.alignStart ]
+                [ config.menuIcon
+                    |> Maybe.withDefault
+                        (iconButton
+                            { iconButtonConfig
+                                | onClick = Just OpenDrawerClicked
+                                , additionalAttributes =
+                                    [ TopAppBar.navigationIcon ]
+                            }
+                            "menu"
+                        )
+                , Html.h1 [ TopAppBar.title ] [ text config.title ]
+                ]
+             ]
+                ++ config.additionalSections
+            )
+        ]
 
 
-viewDailySpread : Screen.Config Msg -> Model -> List (Html Msg)
-viewDailySpread screenConfig model =
-    Screen.DailySpread.view DailySpreadMsg screenConfig model.dailySpread
-
-
-viewNotFound : Screen.Config Msg -> String -> Model -> List (Html Msg)
-viewNotFound screenConfig urlString model =
-    [ Html.div [ class "not-found" ]
-        [ text ("URL not found: " ++ urlString) ]
-    ]
-
-
-viewStart : Screen.Config Msg -> Model -> List (Html Msg)
-viewStart screenConfig model =
-    Screen.Start.view StartMsg screenConfig model.start
-
-
-viewEditBullet : Screen.Config Msg -> Model -> List (Html Msg)
-viewEditBullet screenConfig model =
-    model.editBullet
-        |> Maybe.map (Screen.EditBullet.view EditBulletMsg screenConfig)
-        |> Maybe.withDefault []
+makeScreenConfig : Model -> Screen.Config Msg
+makeScreenConfig model =
+    { topAppBar = topAppBar_
+    , fixedAdjust = TopAppBar.fixedAdjust
+    , today = model.today
+    , now = model.now
+    , parse = parseConfig
+    , key = model.key
+    , timeZone = model.timeZone
+    }
