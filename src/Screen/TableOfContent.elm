@@ -14,7 +14,7 @@ import Html.Attributes exposing (class, style)
 import Html.Events
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Card exposing (card, cardBlock, cardConfig)
-import Material.Dialog exposing (cancelButton, dialog, dialogConfig)
+import Material.Dialog exposing (dialog, dialogConfig)
 import Material.Fab exposing (fab, fabConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemPrimaryText, listItemSecondaryText, listItemText)
@@ -286,20 +286,24 @@ view lift config model =
                     [ text "Collections will show here, so you can quickly find them."
                     ]
                 ]
-            , list
-                { listConfig
-                    | additionalAttributes =
-                        [ class "table-of-content__items-wrapper" ]
-                }
-                (List.map Tuple.second <|
-                    List.sortBy Tuple.first <|
-                        List.concat
-                            [ collectionSpreads
+            , if List.isEmpty collectionSpreads then
+                text ""
 
-                            -- , monthlySpreads
-                            -- , dailySpreads
-                            ]
-                )
+              else
+                list
+                    { listConfig
+                        | additionalAttributes =
+                            [ class "table-of-content__items-wrapper" ]
+                    }
+                    (List.map Tuple.second <|
+                        List.sortBy Tuple.first <|
+                            List.concat
+                                [ collectionSpreads
+
+                                -- , monthlySpreads
+                                -- , dailySpreads
+                                ]
+                    )
             , fab
                 { fabConfig
                     | onClick = Just (lift NewSpreadClicked)
@@ -380,7 +384,7 @@ newSpreadDialog lift config model =
                 ]
             ]
         , actions =
-            [ cancelButton
+            [ textButton
                 { buttonConfig
                     | onClick = Just (lift NewSpreadDialogClosed)
                 }

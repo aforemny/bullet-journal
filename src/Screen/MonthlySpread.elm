@@ -160,24 +160,28 @@ view lift config model =
                                         )
                                     )
                                 )
-                            , list
-                                { listConfig
-                                    | additionalAttributes =
-                                        [ class "monthly-spread__bullets-wrapper" ]
-                                }
-                                (List.map
-                                    (\bullet ->
-                                        Bullet.view
-                                            { additionalOptions =
-                                                [ class "monthly-spread__bullet"
-                                                , Html.Events.onClick
-                                                    (lift (BulletClicked bullet.objectId))
-                                                ]
-                                            }
-                                            (Bullet.fromParseObject bullet)
+                            , if List.isEmpty model.bullets then
+                                text ""
+
+                              else
+                                list
+                                    { listConfig
+                                        | additionalAttributes =
+                                            [ class "monthly-spread__bullets-wrapper" ]
+                                    }
+                                    (List.map
+                                        (\bullet ->
+                                            Bullet.view
+                                                { additionalOptions =
+                                                    [ class "monthly-spread__bullet"
+                                                    , Html.Events.onClick
+                                                        (lift (BulletClicked bullet.objectId))
+                                                    ]
+                                                }
+                                                (Bullet.fromParseObject bullet)
+                                        )
+                                        model.bullets
                                     )
-                                    model.bullets
-                                )
                             ]
                         ]
                 ]

@@ -14,18 +14,7 @@ git submodule update --init
 ```
 
 
-### Nix package manager
-
-```sh
-nix-shell --run "make"
-nix-shell --run "npm run dev"
-open http://localhost:1337
-```
-
-The dashboard runs on http://localhost:4040.
-
-
-### Other Linux
+### Build on Linux
 
 ```sh
 make

@@ -12,10 +12,9 @@ import Browser.Navigation
 import Html exposing (Html, text)
 import Html.Attributes exposing (class, style)
 import Html.Events
-import Material.Button exposing (buttonConfig, raisedButton)
-import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
+import Material.Button exposing (buttonConfig, raisedButton, textButton)
+import Material.Dialog exposing (dialog, dialogConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.List exposing (list, listConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
 import Parse
@@ -225,8 +224,8 @@ view lift viewConfig model =
                 ]
                 [ textField
                     { textFieldConfig
-                        | label = "Title"
-                        , value = Just model.title
+                        | label = Just "Title"
+                        , value = model.title
                         , onInput = Just (lift << TitleChanged)
                     }
                 ]
@@ -274,12 +273,12 @@ Do you really want to delete this collection spread?"
                           """
                         ]
                     , actions =
-                        [ cancelButton
+                        [ textButton
                             { buttonConfig
                                 | onClick = Just (lift CancelDeleteClicked)
                             }
                             "No"
-                        , acceptButton
+                        , textButton
                             { buttonConfig
                                 | onClick = Just (lift ConfirmDeleteClicked)
                             }

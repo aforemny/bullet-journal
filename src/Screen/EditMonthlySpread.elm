@@ -7,7 +7,6 @@ import Html.Events
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.TopAppBar as TopAppBar
 import Parse

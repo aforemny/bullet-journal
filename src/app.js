@@ -1,4 +1,3 @@
-import "./material-components-elm/src/material-components-elm";
 import {Elm} from "./elm";
 
 var getToday = function() {

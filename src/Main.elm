@@ -8,7 +8,7 @@ import Html.Attributes exposing (class, style)
 import Html.Events
 import Json.Decode as Decode exposing (Value)
 import Material.Button exposing (buttonConfig, textButton)
-import Material.Drawer exposing (drawerConfig, drawerScrim, modalDrawer)
+import Material.Drawer exposing (drawerScrim, modalDrawer, modalDrawerConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic)
 import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
@@ -240,7 +240,7 @@ drawer model =
             Calendar.toGregorian model.today
     in
     [ modalDrawer
-        { drawerConfig
+        { modalDrawerConfig
             | open = model.drawerOpen
             , onClose = Just DrawerClosed
         }

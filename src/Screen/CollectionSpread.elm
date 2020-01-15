@@ -194,23 +194,27 @@ view lift config model =
                                 [ class "collection-spread__subtitle" ]
                                 [ text "Describe collection" ]
                             ]
-                        , list
-                            { listConfig
-                                | additionalAttributes =
-                                    [ class "collection-spread__bullet-wrapper" ]
-                            }
-                            (List.map
-                                (\bullet ->
-                                    Bullet.view
-                                        { additionalOptions =
-                                            [ class "collection-spread__bullet"
-                                            , Html.Events.onClick (lift (BulletClicked bullet.objectId))
-                                            ]
-                                        }
-                                        (Bullet.fromParseObject bullet)
+                        , if List.isEmpty model.bullets then
+                            text ""
+
+                          else
+                            list
+                                { listConfig
+                                    | additionalAttributes =
+                                        [ class "collection-spread__bullet-wrapper" ]
+                                }
+                                (List.map
+                                    (\bullet ->
+                                        Bullet.view
+                                            { additionalOptions =
+                                                [ class "collection-spread__bullet"
+                                                , Html.Events.onClick (lift (BulletClicked bullet.objectId))
+                                                ]
+                                            }
+                                            (Bullet.fromParseObject bullet)
+                                    )
+                                    model.bullets
                                 )
-                                model.bullets
-                            )
                         ]
                 ]
             , actions = Nothing

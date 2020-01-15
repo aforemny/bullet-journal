@@ -6,7 +6,7 @@ import Json.Decode as Decode exposing (Decoder, Value)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Material.Icon exposing (icon, iconConfig)
-import Material.List exposing (listItem, listItemConfig, listItemGraphic, listItemText)
+import Material.List exposing (ListItem, listItem, listItemConfig, listItemGraphic, listItemText)
 import Parse
 import Parse.Decode
 import Parse.Encode
@@ -271,7 +271,7 @@ type alias Config msg =
     }
 
 
-view : Config msg -> Bullet -> Html msg
+view : Config msg -> Bullet -> ListItem msg
 view config bullet =
     let
         stateCs =

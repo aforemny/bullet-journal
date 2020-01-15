@@ -184,23 +184,27 @@ view lift config model =
                                 , Html.div [ class "daily-spread__subtitle" ]
                                     [ text "The Daily Log is designed for day-to-day use." ]
                                 ]
-                            , list
-                                { listConfig
-                                    | additionalAttributes =
-                                        [ class "daily-spread__bullet-wrapper" ]
-                                }
-                                (List.map
-                                    (\bullet ->
-                                        Bullet.view
-                                            { additionalOptions =
-                                                [ class "daily-spread__bullet"
-                                                , Html.Events.onClick (lift (BulletClicked bullet.objectId))
-                                                ]
-                                            }
-                                            (Bullet.fromParseObject bullet)
+                            , if List.isEmpty sortedBullets then
+                                text ""
+
+                              else
+                                list
+                                    { listConfig
+                                        | additionalAttributes =
+                                            [ class "daily-spread__bullet-wrapper" ]
+                                    }
+                                    (List.map
+                                        (\bullet ->
+                                            Bullet.view
+                                                { additionalOptions =
+                                                    [ class "daily-spread__bullet"
+                                                    , Html.Events.onClick (lift (BulletClicked bullet.objectId))
+                                                    ]
+                                                }
+                                                (Bullet.fromParseObject bullet)
+                                        )
+                                        sortedBullets
                                     )
-                                    sortedBullets
-                                )
                             , fab
                                 { fabConfig
                                     | onClick = Just (lift NewBulletClicked)

@@ -15,10 +15,9 @@ import Html.Events
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Material.Card exposing (card, cardBlock, cardConfig, cardPrimaryAction, cardPrimaryActionConfig)
-import Material.Chip.Choice as Chip exposing (choiceChip, choiceChipConfig)
-import Material.ChipSet exposing (choiceChipSet)
+import Material.Chips exposing (choiceChip, choiceChipConfig, choiceChipSet)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig, listItemGraphic, listItemMeta, listItemPrimaryText, listItemSecondaryText, listItemText)
+import Material.List exposing (ListItem, list, listConfig, listItem, listItemConfig, listItemGraphic, listItemMeta, listItemPrimaryText, listItemSecondaryText, listItemText)
 import Material.TextField exposing (textField, textFieldConfig)
 import Material.Theme as Theme
 import Material.TopAppBar as TopAppBar
@@ -265,7 +264,7 @@ inputCard lift config model =
                                 { textFieldConfig
                                     | placeholder = Just "Enter bullet"
                                     , fullwidth = True
-                                    , value = Just model.input
+                                    , value = model.input
                                     , additionalAttributes =
                                         [ Html.Events.on "keypress"
                                             (Decode.map (lift << InputSubmitted)
@@ -353,8 +352,12 @@ dailyBulletsCard lift ({ today } as config) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
-                    , list listConfig
-                        (List.map (viewBulletDaily lift config model) bullets)
+                    , if List.isEmpty bullets then
+                        text ""
+
+                      else
+                        list listConfig
+                            (List.map (viewBulletDaily lift config model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -397,8 +400,12 @@ monthlyBulletsCard lift ({ today } as config) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
-                    , list listConfig
-                        (List.map (viewBulletMonthly lift config model) bullets)
+                    , if List.isEmpty bullets then
+                        text ""
+
+                      else
+                        list listConfig
+                            (List.map (viewBulletMonthly lift config model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -441,7 +448,11 @@ backlogCard lift ({ today } as config) model sortedBullets =
             [ cardBlock <|
                 Html.div []
                     [ Html.h3 [ class "overview__daily-bullets__title" ] [ text title ]
-                    , list listConfig (List.map (viewBullet lift config model) bullets)
+                    , if List.isEmpty bullets then
+                        text ""
+
+                      else
+                        list listConfig (List.map (viewBullet lift config model) bullets)
                     ]
             ]
         , actions = Nothing
@@ -475,7 +486,7 @@ viewBullet :
     -> Config msg
     -> Model
     -> Parse.Object Bullet
-    -> Html msg
+    -> ListItem msg
 viewBullet lift config model bullet =
     let
         date =
@@ -512,7 +523,7 @@ viewBulletDaily :
     -> Config msg
     -> Model
     -> Parse.Object Bullet
-    -> Html msg
+    -> ListItem msg
 viewBulletDaily lift config model bullet =
     listItem
         { listItemConfig
@@ -531,7 +542,7 @@ viewBulletMonthly :
     -> Config msg
     -> Model
     -> Parse.Object Bullet
-    -> Html msg
+    -> ListItem msg
 viewBulletMonthly lift config model bullet =
     let
         date =

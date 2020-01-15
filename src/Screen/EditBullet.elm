@@ -14,7 +14,7 @@ import Html.Attributes exposing (class, style)
 import Html.Events
 import Material.Button exposing (buttonConfig, raisedButton, textButton)
 import Material.Checkbox exposing (checkbox, checkboxConfig)
-import Material.Dialog exposing (acceptButton, cancelButton, dialog, dialogConfig)
+import Material.Dialog exposing (dialog, dialogConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.Select exposing (filledSelect, selectConfig, selectOption, selectOptionConfig)
 import Material.TextField exposing (textField, textFieldConfig)
@@ -461,7 +461,7 @@ bulletForm lift model =
                     [ textField
                         { textFieldConfig
                             | fullwidth = True
-                            , value = Just model.text
+                            , value = model.text
                             , onInput = Just (lift << TextChanged)
                         }
                     ]
@@ -670,12 +670,12 @@ deleteBullet lift model =
                               """
                 ]
             , actions =
-                [ cancelButton
+                [ textButton
                     { buttonConfig
                         | onClick = Just (lift CancelDeleteClicked)
                     }
                     "No"
-                , acceptButton
+                , textButton
                     { buttonConfig
                         | onClick = Just (lift ConfirmDeleteClicked)
                     }
