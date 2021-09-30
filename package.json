@@ -27,7 +27,7 @@
     "material-design-icons": "^3.0.1",
     "normalize.css": "^8.0.0",
     "parse-dashboard": "^1.2.0",
-    "parse-server": "^2.8.2",
+    "parse-server": "^4.10.4",
     "postcss-cli": "^6.0.0",
     "postcss-loader": "^2.1.6",
     "roboto-fontface": "^0.9.0",
